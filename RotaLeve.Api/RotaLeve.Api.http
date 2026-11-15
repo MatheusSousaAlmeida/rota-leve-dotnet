@@ -1,0 +1,48 @@
+### CADASTRO DE USUÁRIO - endpoint público (sem JWT)
+POST {{host}}/api/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Administrador Inicial",
+  "email": "admin@rotaleve.com",
+  "senha": "Senha@123",
+  "perfil": "cidadao"
+}
+
+@host = http://localhost:5139
+@token = COLE_O_JWT_AQUI
+
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{"email":"maria@exemplo.com","senha":"Senha@123"}
+
+###
+GET {{host}}/api/relatos
+Authorization: Bearer {{token}}
+
+###
+# CRUD de usuários (admin)
+GET {{host}}/api/usuarios
+Authorization: Bearer {{token}}
+
+###
+GET {{host}}/api/usuarios/1
+Authorization: Bearer {{token}}
+
+###
+POST {{host}}/api/usuarios
+Content-Type: application/json
+
+{"nome":"Admin Demo","email":"admin.demo@exemplo.com","senha":"Senha@123","perfil":"admin"}
+
+###
+PUT {{host}}/api/usuarios/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"nome":"Usuario Atualizado","email":"usuario.atualizado@exemplo.com","senha":null,"perfil":"cidadao","ativo":true}
+
+###
+DELETE {{host}}/api/usuarios/1
+Authorization: Bearer {{token}}
