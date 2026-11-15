@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RotaLeve.Api.Application.Dtos;
@@ -12,14 +13,20 @@ namespace RotaLeve.Api.Presentation.Controllers;
 public class PontosCriticosController(IPontoCriticoService service) : ControllerBase
 {
     [HttpGet]
+    [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar pontos críticos ativos",
         Description = "Retorna todos os pontos críticos ativos cadastrados na plataforma Rota Leve.")]
     [SwaggerResponse(StatusCodes.Status200OK, "Pontos críticos retornados com sucesso", typeof(IEnumerable<PontoCriticoResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhum ponto crítico ativo cadastrado")]
+    [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para acessar o recurso")]
     public async Task<IActionResult> Get()
-        => Ok(await service.ListarAsync());
+    {
+        var itens = await service.ListarAsync();
+        return !itens.Any() ? NoContent() : Ok(itens);
+    }
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(

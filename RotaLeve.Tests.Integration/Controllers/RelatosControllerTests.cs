@@ -33,6 +33,25 @@ public class RelatosControllerTests
 
     [Fact]
     [Trait("Controller", "Relatos")]
+    public async Task Get_ListaVazia_DeveRetornarNoContent()
+    {
+        // Arrange
+        _factory.RelatoServiceMock.Reset();
+        _factory.RelatoServiceMock.Setup(x => x.ListarAsync())
+            .ReturnsAsync(new List<RelatoResponseDto>());
+        using var client = CriarClient("cidadao", 1);
+
+        // Act
+        var response = await client.GetAsync("/api/relatos");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+        _factory.RelatoServiceMock.Verify(x => x.ListarAsync(), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Controller", "Relatos")]
     public async Task Get_RelatoInexistente_DeveRetornarNotFound()
     {
         // Arrange

@@ -154,7 +154,7 @@ public class JwtAuthorizationTests
 
     [Fact]
     [Trait("OpenAPI", "Swagger")]
-    public async Task SwaggerJson_DeveTerCadeadoSomenteNosEndpointsProtegidos()
+    public async Task SwaggerJson_DeveConterRequisitoBearerGlobalComoClyvo()
     {
         // Arrange
         await using var factory = CriarFactory();
@@ -163,20 +163,17 @@ public class JwtAuthorizationTests
         // Act
         using var response = await client.GetAsync("/swagger/v1/swagger.json");
         using var document = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var paths = document.RootElement.GetProperty("paths");
-        var login = paths.GetProperty("/api/auth/login").GetProperty("post");
-        var register = paths.GetProperty("/api/usuarios").GetProperty("post");
-        var list = paths.GetProperty("/api/usuarios").GetProperty("get");
-        var health = paths.GetProperty("/health/live").GetProperty("get");
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(document.RootElement.GetProperty("components").GetProperty("securitySchemes")
             .TryGetProperty("Bearer", out _));
-        Assert.False(login.TryGetProperty("security", out var loginSecurity) && loginSecurity.GetArrayLength() > 0);
-        Assert.False(register.TryGetProperty("security", out var registerSecurity) && registerSecurity.GetArrayLength() > 0);
-        Assert.True(list.GetProperty("security")[0].TryGetProperty("Bearer", out _));
-        Assert.True(health.GetProperty("security")[0].TryGetProperty("Bearer", out _));
+        Assert.True(document.RootElement.GetProperty("security")[0].TryGetProperty("Bearer", out _));
+        // O requisito global documenta JWT; [AllowAnonymous] continua controlando
+        // a autorização efetiva de login e cadastro no ASP.NET Core.
+        var paths = document.RootElement.GetProperty("paths");
+        Assert.True(paths.TryGetProperty("/api/auth/login", out _));
+        Assert.True(paths.TryGetProperty("/api/usuarios", out _));
     }
 
     private static Usuario CriarUsuario(TipoUsuario role) => new()

@@ -16,6 +16,25 @@ public class UsuariosControllerTests
 
     [Fact]
     [Trait("Controller", "Usuarios")]
+    public async Task Get_ListaVazia_DeveRetornarNoContent()
+    {
+        // Arrange
+        _factory.UsuarioServiceMock.Reset();
+        _factory.UsuarioServiceMock.Setup(x => x.ListarAsync())
+            .ReturnsAsync(new List<UsuarioDetalheResponseDto>());
+        using var client = CriarClient("admin");
+
+        // Act
+        var response = await client.GetAsync("/api/usuarios");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+        _factory.UsuarioServiceMock.Verify(x => x.ListarAsync(), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Controller", "Usuarios")]
     public async Task Get_Admin_DeveRetornarOk()
     {
         // Arrange

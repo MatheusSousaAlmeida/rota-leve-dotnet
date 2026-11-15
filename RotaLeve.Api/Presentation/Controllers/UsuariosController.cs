@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RotaLeve.Api.Application.Dtos;
@@ -12,14 +13,20 @@ namespace RotaLeve.Api.Presentation.Controllers;
 public class UsuariosController(IUsuarioService service) : ControllerBase
 {
     [HttpGet]
+    [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar usuários",
         Description = "Retorna todos os usuários cadastrados na plataforma, incluindo usuários ativos e inativos. Operação restrita ao perfil admin.")]
     [SwaggerResponse(StatusCodes.Status200OK, "Usuários retornados com sucesso", typeof(IEnumerable<UsuarioDetalheResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhum usuário cadastrado")]
+    [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Apenas administradores podem consultar a lista de usuários")]
     public async Task<IActionResult> Get()
-        => Ok(await service.ListarAsync());
+    {
+        var itens = await service.ListarAsync();
+        return !itens.Any() ? NoContent() : Ok(itens);
+    }
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(

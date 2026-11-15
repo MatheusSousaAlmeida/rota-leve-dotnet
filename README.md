@@ -33,6 +33,7 @@ ASP.NET Core 8, Controllers REST, Entity Framework Core 8, Oracle, JWT, ASP.NET 
 9. Cidadão só altera/exclui o próprio relato enquanto ele estiver `Novo`; admin pode administrar qualquer relato.
 
 ## Rate limiting
+- `GET /api/usuarios`, `GET /api/relatos` e `GET /api/pontos-criticos`: **politica `listagens`**, 5 requisições a cada 20 segundos **por endereço IP**, compartilhadas entre as três listagens (padrão HelpDesk). A sexta chamada na mesma janela retorna HTTP `429`.
 - `POST /api/relatos`: 5 requisições a cada 10 minutos por usuário autenticado (fallback por IP).
 - `POST /api/relatos/{id}/confirmacoes`: 20 requisições por minuto por usuário autenticado (fallback por IP).
 - excesso retorna HTTP `429 Too Many Requests`.
@@ -212,3 +213,19 @@ pwsh -File ./scripts/smoke-jwt.ps1 -BaseUrl http://localhost:5139
 ```
 
 O script cria um administrador de teste (e-mail aleatório), realiza login, verifica 401 sem token, testa acesso autorizado e consulta os dois Health Checks, incluindo Oracle. Para a aplicação publicada, informe a URL base HTTPS no argumento `-BaseUrl`. O script não exibe o JWT nem a senha nos logs.
+
+
+## Ajustes de regressao (v14)
+
+- `GET /api/relatos`: retorna `204 No Content` sem corpo quando nao existem relatos; com registros, retorna `200 OK` com a lista. A resposta `204` tambem foi documentada com `SwaggerResponse` e tem teste de integracao AAA.
+- `GET /api/pontos-criticos`: consulta somente `ATIVO = 1` com SQL Oracle explicito para evitar a excecao `InvalidCastException: System.Int32 -> System.Boolean` observada no Oracle EF Core ao traduzir um predicado booleano com conversao para `NUMBER(1)`. Quando nao ha pontos criticos ativos, retorna `204 No Content`; havendo registros, retorna `200 OK` com a lista.
+- Nenhuma migration foi alterada: o schema `ATIVO NUMBER(1)` permanece o mesmo.
+
+**Validacao de ambiente:** execute `dotnet restore`, `dotnet build`, `dotnet test` e teste os endpoints autenticados contra o Oracle real. Os testes HTTP com mocks nao executam o provider Oracle; por isso o teste manual do `GET /api/pontos-criticos` no banco configurado e indispensavel para confirmar a correcao.
+
+## Swagger e padronizacao das listagens (v15)
+
+- O Swagger segue o mesmo padrao do ClyvoVet: `AddSecurityDefinition` e `AddSecurityRequirement` globais no `Program.cs`. A pasta `Presentation/Swagger` e o filtro customizado foram removidos.
+- **Importante:** como no ClyvoVet, o requisito global pode exibir cadeado inclusive no cadastro e no login. Isso e apenas documentacao OpenAPI: `[AllowAnonymous]` continua tornando `POST /api/usuarios` e `POST /api/auth/login` acessiveis sem JWT. Todos os demais endpoints exigem autenticacao.
+- `GET /api/usuarios`, `GET /api/relatos` e `GET /api/pontos-criticos`: `200 OK` com dados, `204 No Content` quando vazios. Consultas por identificador inexistente continuam retornando `404 Not Found`.
+- Testes de integracao AAA para os retornos vazios de usuarios, relatos e pontos criticos.

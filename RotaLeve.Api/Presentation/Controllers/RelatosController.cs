@@ -17,14 +17,20 @@ public class RelatosController(IRelatoService service) : ControllerBase
     private bool Admin => User.IsInRole("admin");
 
     [HttpGet]
+    [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar relatos colaborativos",
         Description = "Retorna os relatos de acessibilidade cadastrados na plataforma, incluindo status e quantidade de confirmações.")]
     [SwaggerResponse(StatusCodes.Status200OK, "Relatos retornados com sucesso", typeof(IEnumerable<RelatoResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhum relato cadastrado")]
+    [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para acessar o recurso")]
     public async Task<IActionResult> Get()
-        => Ok(await service.ListarAsync());
+    {
+        var relatos = await service.ListarAsync();
+        return relatos.Count == 0 ? NoContent() : Ok(relatos);
+    }
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(

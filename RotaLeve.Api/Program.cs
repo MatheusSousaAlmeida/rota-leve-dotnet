@@ -11,7 +11,6 @@ using RotaLeve.Api.Infrastructure.Data;
 using RotaLeve.Api.Infrastructure.Errors;
 using RotaLeve.Api.Infrastructure.IoC;
 using RotaLeve.Api.Infrastructure.Security;
-using RotaLeve.Api.Presentation.Swagger;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
@@ -97,18 +96,27 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API colaborativa de acessibilidade urbana do projeto CitizenTech Rota Leve."
     });
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    // Mesmo padrão do ClyvoVet: esquema Bearer e requisito global no Program.cs.
+    var securitySchema = new OpenApiSecurityScheme
     {
-        Description = "Cole apenas o JWT retornado pelo login, sem escrever 'Bearer '. O Swagger acrescenta o prefixo automaticamente.",
+        Description = "Informe o JWT retornado pelo login. No esquema HTTP Bearer, cole apenas o token.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
-        BearerFormat = "JWT"
-    });
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference
+        {
+            Type = ReferenceType.SecurityScheme,
+            Id = "Bearer"
+        }
+    };
 
-    // Exibe o cadeado somente em operações que exigem autenticação.
-    c.OperationFilter<JwtAuthorizeOperationFilter>();
+    c.AddSecurityDefinition("Bearer", securitySchema);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { securitySchema, Array.Empty<string>() }
+    });
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -117,6 +125,19 @@ builder.Services.AddRateLimiter(options =>
         c.User.FindFirstValue(ClaimTypes.NameIdentifier)
         ?? c.Connection.RemoteIpAddress?.ToString()
         ?? "anonymous";
+
+    // Política de listagens no padrão HelpDesk: 5 chamadas por IP a cada 20 segundos.
+    options.AddPolicy("listagens", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromSeconds(20),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
 
     options.AddPolicy("relatos", context =>
         RateLimitPartition.GetFixedWindowLimiter(

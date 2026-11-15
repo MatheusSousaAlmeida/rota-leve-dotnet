@@ -17,6 +17,25 @@ public class PontosCriticosControllerTests
 
     [Fact]
     [Trait("Controller", "PontosCriticos")]
+    public async Task Get_ListaVazia_DeveRetornarNoContent()
+    {
+        // Arrange
+        _factory.PontoCriticoServiceMock.Reset();
+        _factory.PontoCriticoServiceMock.Setup(x => x.ListarAsync())
+            .ReturnsAsync(new List<PontoCriticoResponseDto>());
+        using var client = CriarClient("cidadao");
+
+        // Act
+        var response = await client.GetAsync("/api/pontos-criticos");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(await response.Content.ReadAsByteArrayAsync());
+        _factory.PontoCriticoServiceMock.Verify(x => x.ListarAsync(), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Controller", "PontosCriticos")]
     public async Task Get_PontosExistentes_DeveRetornarOk()
     {
         // Arrange
