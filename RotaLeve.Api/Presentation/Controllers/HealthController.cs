@@ -7,7 +7,7 @@ namespace RotaLeve.Api.Presentation.Controllers;
 
 [Route("health")]
 [ApiController]
-[AllowAnonymous]
+[Authorize(Roles = "cidadao,admin")]
 public class HealthController(HealthCheckService healthService) : ControllerBase
 {
     [HttpGet("live")]

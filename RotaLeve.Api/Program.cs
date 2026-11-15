@@ -11,6 +11,7 @@ using RotaLeve.Api.Infrastructure.Data;
 using RotaLeve.Api.Infrastructure.Errors;
 using RotaLeve.Api.Infrastructure.IoC;
 using RotaLeve.Api.Infrastructure.Security;
+using RotaLeve.Api.Presentation.Swagger;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
@@ -44,7 +45,12 @@ builder.Services.AddEndpointsApiExplorer();
 
 var secret = builder.Configuration["Secretkey"] ?? throw new InvalidOperationException("Secretkey não configurada.");
 var key = JwtKeyHelper.Create(secret);
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(o =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(o =>
 {
     o.RequireHttpsMetadata = false;
     o.SaveToken = true;
@@ -55,10 +61,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateIssuer = false,
         ValidateAudience = false,
         ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1)
+        ClockSkew = TimeSpan.FromMinutes(1),
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
+    };
+    o.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            // Não registra credenciais nem o conteúdo do token.
+            Log.Warning(context.Exception, "Falha ao validar JWT. Caminho: {Path}", context.Request.Path);
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            Log.Warning("JWT ausente ou recusado em {Path}. Erro: {Error}",
+                context.Request.Path, context.Error ?? "token ausente/invalido");
+            return Task.CompletedTask;
+        }
     };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Protege endpoints atuais e futuros por padrão. Somente [AllowAnonymous] é público.
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -70,18 +97,18 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API colaborativa de acessibilidade urbana do projeto CitizenTech Rota Leve."
     });
 
-    var scheme = new OpenApiSecurityScheme
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
+        Description = "Cole apenas o JWT retornado pelo login, sem escrever 'Bearer '. O Swagger acrescenta o prefixo automaticamente.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
-        BearerFormat = "JWT",
-        Description = "Informe o token JWT."
-    };
+        BearerFormat = "JWT"
+    });
 
-    c.AddSecurityDefinition("Bearer", scheme);
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement { { scheme, Array.Empty<string>() } });
+    // Exibe o cadeado somente em operações que exigem autenticação.
+    c.OperationFilter<JwtAuthorizeOperationFilter>();
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -197,9 +224,10 @@ if (!app.Environment.IsEnvironment("Testing"))
         }
         catch (Exception ex)
         {
-            Log.Error(ex,
-                "Todas as {Max} tentativas de aplicar migrations falharam. A API iniciara sem garantia de schema atualizado.",
+            Log.Fatal(ex,
+                "Todas as {Max} tentativas de aplicar migrations falharam. A API nao sera iniciada sem schema valido.",
                 maxRetries);
+            throw;
         }
     }
 }

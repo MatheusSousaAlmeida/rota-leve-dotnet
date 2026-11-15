@@ -176,3 +176,39 @@ O projeto aplica automaticamente as migrations do Entity Framework Core durante 
 - A migration inicial está em `RotaLeve.Api/Infrastructure/Data/Migrations/20261113000100_InitialCreate.cs`.
 
 Em um banco vazio, basta configurar `OracleDbConnection` e iniciar a API; o schema será criado automaticamente. Para futuras alterações no modelo, crie uma nova migration com `dotnet ef migrations add <NomeDaMigration>` e ela será aplicada automaticamente na próxima inicialização.
+
+
+## Autenticação JWT no Swagger e publicação DevOps (v13)
+
+**Somente** `POST /api/usuarios` e `POST /api/auth/login` são públicos. Todos os demais endpoints, inclusive `/health/live` e `/health/ready`, exigem um JWT válido. As funções administrativas exigem a role `admin`. O cadastro público aceita `admin` apenas para fins demonstrativos; **não é uma configuração segura para produção real**.
+
+1. Configure `ConnectionStrings__OracleDbConnection` e `Secretkey` por variáveis de ambiente no destino (ou arquivos appsettings locais). Não publique credenciais reais.
+2. Execute a API com o Oracle acessível. No startup o EF Core aplica migrations; se todas as tentativas falharem, a aplicação encerra com erro em vez de prosseguir sem tabelas. Use um schema vazio para a migration inicial.
+3. No Swagger, execute `POST /api/usuarios` para criar uma conta `admin`, depois `POST /api/auth/login`.
+4. Copie **somente** o valor `accessToken` retornado. Clique em **Authorize**, cole o JWT **sem** escrever `Bearer ` na frente e confirme. Swagger utiliza o esquema HTTP bearer e adiciona o prefixo sozinho.
+5. Execute `GET /api/usuarios` ou `GET /health/live` com o token. A ausência de token retorna **401**; token de `cidadao` em rota exclusiva de admin retorna **403**.
+6. Para testar fora do Swagger, envie o cabeçalho `Authorization: Bearer <accessToken>`.
+
+**Observação de infraestrutura:** como os Health Checks requerem JWT nesta entrega, um serviço de monitoramento/orquestrador deve enviar um token válido para essas URLs.
+
+**Logs de diagnóstico:** erros de assinatura, expiração ou formato do JWT são registrados sem expor o token, na pasta diária `logs`.
+
+### Validação pré-entrega
+
+```powershell
+dotnet restore RotaLeve.sln
+dotnet build RotaLeve.sln --no-restore
+dotnet test RotaLeve.sln --no-build
+```
+
+O SDK .NET não estava disponível no ambiente de edição; executar esses comandos no Visual Studio / ambiente DevOps antes de entregar.
+
+### Smoke test para DevOps (PowerShell 7)
+
+Depois de configurar o Oracle e iniciar a API, execute:
+
+```powershell
+pwsh -File ./scripts/smoke-jwt.ps1 -BaseUrl http://localhost:5139
+```
+
+O script cria um administrador de teste (e-mail aleatório), realiza login, verifica 401 sem token, testa acesso autorizado e consulta os dois Health Checks, incluindo Oracle. Para a aplicação publicada, informe a URL base HTTPS no argumento `-BaseUrl`. O script não exibe o JWT nem a senha nos logs.

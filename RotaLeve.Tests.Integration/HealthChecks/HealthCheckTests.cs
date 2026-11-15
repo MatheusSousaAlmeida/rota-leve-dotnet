@@ -16,6 +16,7 @@ public class HealthCheckTests
     {
         // Arrange
         using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Test-Role", "cidadao");
 
         // Act
         var response = await client.GetAsync("/health/live");
