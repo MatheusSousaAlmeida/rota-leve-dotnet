@@ -7,7 +7,9 @@ namespace RotaLeve.Api.Presentation.Controllers;
 
 [Route("health")]
 [ApiController]
-[Authorize(Roles = "cidadao,admin")]
+// Monitoramento deve funcionar mesmo durante indisponibilidade do Oracle,
+// quando não é possível autenticar usuários ou emitir novos tokens.
+[AllowAnonymous]
 public class HealthController(HealthCheckService healthService) : ControllerBase
 {
     [HttpGet("live")]

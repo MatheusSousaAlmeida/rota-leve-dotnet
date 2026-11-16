@@ -3,14 +3,17 @@ using RotaLeve.Api.Domain.Enums;
 
 namespace RotaLeve.Api.Application.Dtos;
 
-public class PontoCriticoRequestDto
+public class LocalidadeRequestDto
 {
     [Required, StringLength(140)] public string Nome { get; set; } = string.Empty;
-    [Required] public TipoPontoCritico Tipo { get; set; }
+    [Required]
+    [EnumDataType(typeof(TipoLocalidade),
+        ErrorMessage = "Tipo de localidade inválido.")]
+    public TipoLocalidade Tipo { get; set; }
     [StringLength(400)] public string? Descricao { get; set; }
     [StringLength(250)] public string? Endereco { get; set; }
     [Range(-90, 90)] public decimal Latitude { get; set; }
     [Range(-180, 180)] public decimal Longitude { get; set; }
 }
 
-public record PontoCriticoResponseDto(int Id, string Nome, TipoPontoCritico Tipo, string? Descricao, string? Endereco, decimal Latitude, decimal Longitude, bool Ativo, DateTime DataCriacao);
+public record LocalidadeResponseDto(int Id, string Nome, TipoLocalidade Tipo, string? Descricao, string? Endereco, decimal Latitude, decimal Longitude, bool Ativo, DateTime DataCriacao);

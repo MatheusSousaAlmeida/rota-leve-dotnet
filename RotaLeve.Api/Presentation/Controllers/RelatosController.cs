@@ -54,7 +54,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
         Summary = "Criar relato",
         Description = "Cria um novo relato de acessibilidade associado ao usuário autenticado. A operação possui política de Rate Limiting para reduzir spam.")]
     [SwaggerResponse(StatusCodes.Status201Created, "Relato criado com sucesso", typeof(RelatoResponseDto))]
-    [SwaggerResponse(StatusCodes.Status400BadRequest, "Dados inválidos ou ponto crítico inexistente/inativo")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Dados inválidos ou localidade inexistente/inativo")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para criar relatos")]
     [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de criação de relatos excedido")]
@@ -71,7 +71,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
         Summary = "Atualizar relato",
         Description = "Permite ao cidadão atualizar apenas um relato próprio ainda em status Novo. O admin pode atualizar qualquer relato.")]
     [SwaggerResponse(StatusCodes.Status200OK, "Relato atualizado com sucesso", typeof(RelatoResponseDto))]
-    [SwaggerResponse(StatusCodes.Status400BadRequest, "Dados inválidos ou ponto crítico inexistente/inativo")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Dados inválidos ou localidade inexistente/inativo")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Cidadão tentando alterar relato de outro usuário")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Relato não encontrado")]

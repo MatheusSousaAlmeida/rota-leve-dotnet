@@ -6,7 +6,7 @@ namespace RotaLeve.Api.Infrastructure.Data;
 public class ApplicationContext(DbContextOptions<ApplicationContext> options) : DbContext(options)
 {
     public DbSet<Usuario> Usuarios => Set<Usuario>();
-    public DbSet<PontoCritico> PontosCriticos => Set<PontoCritico>();
+    public DbSet<Localidade> Localidades => Set<Localidade>();
     public DbSet<Relato> Relatos => Set<Relato>();
     public DbSet<ConfirmacaoRelato> ConfirmacoesRelato => Set<ConfirmacaoRelato>();
 
@@ -21,9 +21,9 @@ public class ApplicationContext(DbContextOptions<ApplicationContext> options) : 
             e.Property(x => x.SenhaHash).HasColumnType("VARCHAR2(500)");
             e.HasIndex(x => x.Email).IsUnique().HasDatabaseName("UX_USUARIO_EMAIL");
         });
-        modelBuilder.Entity<PontoCritico>(e =>
+        modelBuilder.Entity<Localidade>(e =>
         {
-            e.Property(x => x.IdPontoCritico).ValueGeneratedOnAdd();
+            e.Property(x => x.IdLocalidade).ValueGeneratedOnAdd();
             e.Property(x => x.Ativo).HasConversion<int>().HasColumnType("NUMBER(1)");
             e.Property(x => x.Nome).HasColumnType("VARCHAR2(140)");
             e.Property(x => x.Descricao).HasColumnType("VARCHAR2(400)");
@@ -34,7 +34,7 @@ public class ApplicationContext(DbContextOptions<ApplicationContext> options) : 
             e.Property(x => x.IdRelato).ValueGeneratedOnAdd();
             e.Property(x => x.Descricao).HasColumnType("VARCHAR2(600)");
             e.HasOne(x => x.Usuario).WithMany(x => x.Relatos).HasForeignKey(x => x.IdUsuario).OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_RELATO_USUARIO");
-            e.HasOne(x => x.PontoCritico).WithMany(x => x.Relatos).HasForeignKey(x => x.IdPontoCritico).OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_RELATO_PONTO");
+            e.HasOne(x => x.Localidade).WithMany(x => x.Relatos).HasForeignKey(x => x.IdLocalidade).OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_RELATO_LOCALIDADE");
         });
         modelBuilder.Entity<ConfirmacaoRelato>(e =>
         {

@@ -10,7 +10,7 @@ public class RateLimitListagensTests
     [Theory]
     [InlineData("/api/usuarios")]
     [InlineData("/api/relatos")]
-    [InlineData("/api/pontos-criticos")]
+    [InlineData("/api/localidades")]
     [Trait("RateLimit", "Listagens")]
     public async Task Listar_AposCincoRequisicoes_DeveRetornar429(string rota)
     {
@@ -24,8 +24,8 @@ public class RateLimitListagensTests
             .ReturnsAsync(new List<UsuarioDetalheResponseDto>());
         factory.RelatoServiceMock.Setup(x => x.ListarAsync())
             .ReturnsAsync(new List<RelatoResponseDto>());
-        factory.PontoCriticoServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<PontoCriticoResponseDto>());
+        factory.LocalidadeServiceMock.Setup(x => x.ListarAsync())
+            .ReturnsAsync(new List<LocalidadeResponseDto>());
 
         // Act
         var respostas = new List<HttpResponseMessage>();

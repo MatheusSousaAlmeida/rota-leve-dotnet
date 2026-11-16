@@ -11,14 +11,14 @@ public class RelatoServiceTests
 {
     private readonly Mock<IRelatoRepository> _relatos = new();
     private readonly Mock<IConfirmacaoRepository> _confirmacoes = new();
-    private readonly Mock<IPontoCriticoRepository> _pontos = new();
+    private readonly Mock<ILocalidadeRepository> _pontos = new();
 
     [Fact]
     [Trait("Application", "Relatos")]
     public async Task Criar_ComPontoInexistente_DeveRetornar400()
     {
         // Arrange
-        _pontos.Setup(x => x.ObterAsync(99)).ReturnsAsync((PontoCritico?)null);
+        _pontos.Setup(x => x.ObterAsync(99)).ReturnsAsync((Localidade?)null);
         // Act
         var result = await CriarService().CriarAsync(1, DtoValido(99));
         // Assert
@@ -31,7 +31,7 @@ public class RelatoServiceTests
     public async Task Criar_ComPontoInativo_DeveRetornar400()
     {
         // Arrange
-        _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new PontoCritico { IdPontoCritico = 2, Ativo = false });
+        _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new Localidade { IdLocalidade = 2, Ativo = false });
         // Act
         var result = await CriarService().CriarAsync(1, DtoValido(2));
         // Assert
@@ -44,7 +44,7 @@ public class RelatoServiceTests
     public async Task Criar_DadosValidos_DeveCriarComoNovoERetornar201()
     {
         // Arrange
-        _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new PontoCritico { IdPontoCritico = 2, Ativo = true });
+        _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new Localidade { IdLocalidade = 2, Ativo = true });
         _relatos.Setup(x => x.AdicionarAsync(It.IsAny<Relato>()))
             .ReturnsAsync((Relato r) => { r.IdRelato = 15; return r; });
         var dto = DtoValido(2);
@@ -93,7 +93,7 @@ public class RelatoServiceTests
     {
         // Arrange
         _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(new Relato { IdRelato = 10, IdUsuario = 2, Status = StatusRelato.Ativo });
-        _pontos.Setup(x => x.ObterAsync(1)).ReturnsAsync(new PontoCritico { IdPontoCritico = 1, Ativo = true });
+        _pontos.Setup(x => x.ObterAsync(1)).ReturnsAsync(new Localidade { IdLocalidade = 1, Ativo = true });
         _relatos.Setup(x => x.AtualizarAsync(It.IsAny<Relato>())).ReturnsAsync((Relato r) => r);
 
         // Act
@@ -296,7 +296,7 @@ public class RelatoServiceTests
 
     private static RelatoRequestDto DtoValido(int pontoId = 1) => new()
     {
-        PontoCriticoId = pontoId,
+        LocalidadeId = pontoId,
         Tipo = TipoRelato.ElevadorIndisponivel,
         Descricao = "Elevador indisponivel para acesso",
         Latitude = -23.5505m,

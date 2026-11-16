@@ -231,7 +231,7 @@ public class RelatosControllerTests
 
     private static RelatoRequestDto CriarRequest() => new()
     {
-        PontoCriticoId = 1,
+        LocalidadeId = 1,
         Tipo = TipoRelato.ElevadorIndisponivel,
         Descricao = "Elevador principal indisponivel",
         Latitude = -23.5505m,

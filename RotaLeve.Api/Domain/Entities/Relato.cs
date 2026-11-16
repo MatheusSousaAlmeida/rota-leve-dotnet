@@ -14,8 +14,8 @@ public class Relato
     [Column("ID_USUARIO")]
     public int IdUsuario { get; set; }
 
-    [Column("ID_PONTO_CRITICO")]
-    public int IdPontoCritico { get; set; }
+    [Column("ID_LOCALIDADE")]
+    public int IdLocalidade { get; set; }
 
     [Required, Column("TIPO")]
     public TipoRelato Tipo { get; set; }
@@ -42,6 +42,6 @@ public class Relato
     public DateTime? DataResolucao { get; set; }
 
     [JsonIgnore] public Usuario? Usuario { get; set; }
-    [JsonIgnore] public PontoCritico? PontoCritico { get; set; }
+    [JsonIgnore] public Localidade? Localidade { get; set; }
     [JsonIgnore] public ICollection<ConfirmacaoRelato> Confirmacoes { get; set; } = new List<ConfirmacaoRelato>();
 }

@@ -26,6 +26,20 @@ public class HealthCheckTests
     }
 
     [Fact]
+    [Trait("HealthCheck", "API")]
+    public async Task Live_SemJwt_DeveRetornarOk()
+    {
+        // Arrange
+        using var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/health/live");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     [Trait("OpenAPI", "Swagger")]
     public async Task SwaggerJson_DeveEstarDisponivel()
     {

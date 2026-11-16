@@ -12,7 +12,7 @@ namespace RotaLeve.Tests.Integration.Fixtures;
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     public Mock<IAuthService> AuthServiceMock { get; } = new();
-    public Mock<IPontoCriticoService> PontoCriticoServiceMock { get; } = new();
+    public Mock<ILocalidadeService> LocalidadeServiceMock { get; } = new();
     public Mock<IRelatoService> RelatoServiceMock { get; } = new();
     public Mock<IUsuarioService> UsuarioServiceMock { get; } = new();
 
@@ -30,12 +30,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(IAuthService));
-            services.RemoveAll(typeof(IPontoCriticoService));
+            services.RemoveAll(typeof(ILocalidadeService));
             services.RemoveAll(typeof(IRelatoService));
             services.RemoveAll(typeof(IUsuarioService));
 
             services.AddSingleton(AuthServiceMock.Object);
-            services.AddSingleton(PontoCriticoServiceMock.Object);
+            services.AddSingleton(LocalidadeServiceMock.Object);
             services.AddSingleton(RelatoServiceMock.Object);
             services.AddSingleton(UsuarioServiceMock.Object);
 

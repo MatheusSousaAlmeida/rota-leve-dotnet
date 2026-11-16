@@ -7,7 +7,7 @@ using RotaLeve.Api.Domain.Models;
 
 namespace RotaLeve.Api.Application.Services;
 
-public class RelatoService(IRelatoRepository relatos, IConfirmacaoRepository confirmacoes, IPontoCriticoRepository pontos) : IRelatoService
+public class RelatoService(IRelatoRepository relatos, IConfirmacaoRepository confirmacoes, ILocalidadeRepository pontos) : IRelatoService
 {
     private static readonly TimeSpan Expiracao = TimeSpan.FromHours(72);
 
@@ -25,9 +25,9 @@ public class RelatoService(IRelatoRepository relatos, IConfirmacaoRepository con
 
     public async Task<OperationResult<RelatoResponseDto>> CriarAsync(int usuarioId, RelatoRequestDto dto)
     {
-        var ponto = await pontos.ObterAsync(dto.PontoCriticoId);
-        if (ponto is null || !ponto.Ativo) return OperationResult<RelatoResponseDto>.Failure("Ponto crítico não encontrado ou inativo.", 400);
-        var e = await relatos.AdicionarAsync(new Relato { IdUsuario = usuarioId, IdPontoCritico = dto.PontoCriticoId, Tipo = dto.Tipo, Descricao = dto.Descricao.Trim(), Latitude = dto.Latitude, Longitude = dto.Longitude, Status = StatusRelato.Novo });
+        var ponto = await pontos.ObterAsync(dto.LocalidadeId);
+        if (ponto is null || !ponto.Ativo) return OperationResult<RelatoResponseDto>.Failure("Localidade não encontrado ou inativo.", 400);
+        var e = await relatos.AdicionarAsync(new Relato { IdUsuario = usuarioId, IdLocalidade = dto.LocalidadeId, Tipo = dto.Tipo, Descricao = dto.Descricao.Trim(), Latitude = dto.Latitude, Longitude = dto.Longitude, Status = StatusRelato.Novo });
         return OperationResult<RelatoResponseDto>.Success(ToDto(e), 201);
     }
 
@@ -36,8 +36,8 @@ public class RelatoService(IRelatoRepository relatos, IConfirmacaoRepository con
         var e = await relatos.ObterAsync(id, true); if (e is null) return OperationResult<RelatoResponseDto>.Failure("Relato não encontrado.", 404);
         if (!admin && e.IdUsuario != usuarioId) return OperationResult<RelatoResponseDto>.Failure("Você só pode alterar seus próprios relatos.", 403);
         if (!admin && e.Status != StatusRelato.Novo) return OperationResult<RelatoResponseDto>.Failure("Relatos com confirmações ou finalizados não podem ser alterados pelo cidadão.", 409);
-        var ponto = await pontos.ObterAsync(dto.PontoCriticoId); if (ponto is null || !ponto.Ativo) return OperationResult<RelatoResponseDto>.Failure("Ponto crítico não encontrado ou inativo.", 400);
-        e.IdPontoCritico = dto.PontoCriticoId; e.Tipo = dto.Tipo; e.Descricao = dto.Descricao.Trim(); e.Latitude = dto.Latitude; e.Longitude = dto.Longitude;
+        var ponto = await pontos.ObterAsync(dto.LocalidadeId); if (ponto is null || !ponto.Ativo) return OperationResult<RelatoResponseDto>.Failure("Localidade não encontrado ou inativo.", 400);
+        e.IdLocalidade = dto.LocalidadeId; e.Tipo = dto.Tipo; e.Descricao = dto.Descricao.Trim(); e.Latitude = dto.Latitude; e.Longitude = dto.Longitude;
         await relatos.AtualizarAsync(e); return OperationResult<RelatoResponseDto>.Success(ToDto(e));
     }
 
@@ -76,5 +76,5 @@ public class RelatoService(IRelatoRepository relatos, IConfirmacaoRepository con
         return OperationResult<RelatoResponseDto>.Success(ToDto(relato));
     }
 
-    private static RelatoResponseDto ToDto(Relato e) => new(e.IdRelato, e.IdUsuario, e.IdPontoCritico, e.Tipo, e.Descricao, e.Latitude, e.Longitude, e.Status, e.Confirmacoes?.Count ?? 0, e.DataCriacao, e.DataUltimaConfirmacao, e.DataResolucao);
+    private static RelatoResponseDto ToDto(Relato e) => new(e.IdRelato, e.IdUsuario, e.IdLocalidade, e.Tipo, e.Descricao, e.Latitude, e.Longitude, e.Status, e.Confirmacoes?.Count ?? 0, e.DataCriacao, e.DataUltimaConfirmacao, e.DataResolucao);
 }

@@ -41,7 +41,7 @@ public class JwtAuthorizationTests
 
     [Fact]
     [Trait("Security", "JWT")]
-    public async Task PostPontoCritico_TokenCidadao_DeveRetornarForbidden()
+    public async Task PostLocalidade_TokenCidadao_DeveRetornarForbidden()
     {
         // Arrange
         await using var factory = CriarFactory();
@@ -49,7 +49,7 @@ public class JwtAuthorizationTests
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GerarToken("cidadao"));
 
         // Act
-        var response = await client.PostAsync("/api/pontos-criticos", null);
+        var response = await client.PostAsync("/api/localidades", null);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -123,7 +123,7 @@ public class JwtAuthorizationTests
 
     [Fact]
     [Trait("Security", "JWT")]
-    public async Task HealthLive_SemToken_DeveRetornarUnauthorized()
+    public async Task HealthLive_SemToken_DeveRetornarOk()
     {
         // Arrange
         await using var factory = CriarFactory();
@@ -133,7 +133,7 @@ public class JwtAuthorizationTests
         var response = await client.GetAsync("/health/live");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class JwtAuthorizationTests
 
     [Fact]
     [Trait("OpenAPI", "Swagger")]
-    public async Task SwaggerJson_DeveConterRequisitoBearerGlobalComoClyvo()
+    public async Task SwaggerJson_DeveConterRequisitoBearerGlobal()
     {
         // Arrange
         await using var factory = CriarFactory();

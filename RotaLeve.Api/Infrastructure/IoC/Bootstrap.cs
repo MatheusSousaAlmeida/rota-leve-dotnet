@@ -15,12 +15,12 @@ public static class Bootstrap
         var connection = configuration.GetConnectionString("OracleDbConnection") ?? string.Empty;
         services.AddDbContext<ApplicationContext>(o => o.UseOracle(connection, x => x.UseOracleSQLCompatibility(OracleSQLCompatibility.DatabaseVersion21)));
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-        services.AddScoped<IPontoCriticoRepository, PontoCriticoRepository>();
+        services.AddScoped<ILocalidadeRepository, LocalidadeRepository>();
         services.AddScoped<IRelatoRepository, RelatoRepository>();
         services.AddScoped<IConfirmacaoRepository, ConfirmacaoRepository>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
-        services.AddScoped<IPontoCriticoService, PontoCriticoService>();
+        services.AddScoped<ILocalidadeService, LocalidadeService>();
         services.AddScoped<IRelatoService, RelatoService>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();

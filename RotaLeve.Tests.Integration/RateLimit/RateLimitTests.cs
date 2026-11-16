@@ -66,7 +66,7 @@ public class RateLimitTests
 
     private static RelatoRequestDto CriarRelatoRequest() => new()
     {
-        PontoCriticoId = 1,
+        LocalidadeId = 1,
         Tipo = TipoRelato.ElevadorIndisponivel,
         Descricao = "Elevador indisponivel para teste de rate limit",
         Latitude = -23.5m,

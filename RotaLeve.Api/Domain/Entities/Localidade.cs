@@ -5,17 +5,17 @@ using RotaLeve.Api.Domain.Enums;
 
 namespace RotaLeve.Api.Domain.Entities;
 
-[Table("PONTO_CRITICO")]
-public class PontoCritico
+[Table("LOCALIDADE")]
+public class Localidade
 {
-    [Key, Column("ID_PONTO_CRITICO"), DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int IdPontoCritico { get; set; }
+    [Key, Column("ID_LOCALIDADE"), DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int IdLocalidade { get; set; }
 
     [Required, StringLength(140), Column("NOME")]
     public string Nome { get; set; } = string.Empty;
 
     [Required, Column("TIPO")]
-    public TipoPontoCritico Tipo { get; set; }
+    public TipoLocalidade Tipo { get; set; }
 
     [StringLength(400), Column("DESCRICAO")]
     public string? Descricao { get; set; }

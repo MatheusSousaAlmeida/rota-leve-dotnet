@@ -4,12 +4,12 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RotaLeve.Api.Infrastructure.Data;
 using RotaLeve.Api.Infrastructure.Errors;
 using RotaLeve.Api.Infrastructure.IoC;
+using RotaLeve.Api.Infrastructure.Health;
 using RotaLeve.Api.Infrastructure.Security;
 using Serilog;
 using Serilog.Context;
@@ -96,7 +96,7 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API colaborativa de acessibilidade urbana do projeto CitizenTech Rota Leve."
     });
 
-    // Mesmo padrão do ClyvoVet: esquema Bearer e requisito global no Program.cs.
+    // Define o esquema HTTP Bearer e o requisito global de segurança do Swagger.
     var securitySchema = new OpenApiSecurityScheme
     {
         Description = "Informe o JWT retornado pelo login. No esquema HTTP Bearer, cole apenas o token.",
@@ -126,7 +126,7 @@ builder.Services.AddRateLimiter(options =>
         ?? c.Connection.RemoteIpAddress?.ToString()
         ?? "anonymous";
 
-    // Política de listagens no padrão HelpDesk: 5 chamadas por IP a cada 20 segundos.
+    // Limita as consultas de listagem a 5 chamadas por IP a cada 20 segundos.
     options.AddPolicy("listagens", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -167,13 +167,17 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddHealthChecks()
     .AddCheck(
         "self",
-        () => HealthCheckResult.Healthy("API em execução."),
+        () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("API em execução."),
         tags: ["live"])
-    .AddOracle(
-        builder.Configuration.GetConnectionString("OracleDbConnection") ?? string.Empty,
-        name: "oracle",
-        failureStatus: HealthStatus.Unhealthy,
+    .AddCheck<OracleConnectivityHealthCheck>(
+        "oracle",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
         tags: ["ready", "db"]);
+
+// Migrations rodam em segundo plano e não bloqueiam Swagger/Health Checks.
+// Em testes, não é estabelecida nenhuma conexão com o Oracle.
+if (!builder.Environment.IsEnvironment("Testing"))
+    builder.Services.AddHostedService<OracleMigrationHostedService>();
 
 var app = builder.Build();
 
@@ -220,38 +224,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-if (!app.Environment.IsEnvironment("Testing"))
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
-
-    const int maxRetries = 6;
-    const int retryDelaySeconds = 20;
-
-    for (var attempt = 1; attempt <= maxRetries; attempt++)
-    {
-        try
-        {
-            dbContext.Database.Migrate();
-            Log.Information("Migrations do banco de dados aplicadas/verificadas com sucesso");
-            break;
-        }
-        catch (Exception ex) when (attempt < maxRetries)
-        {
-            Log.Warning(ex,
-                "Tentativa {Attempt}/{Max} de aplicar migrations falhou. Nova tentativa em {Delay}s...",
-                attempt, maxRetries, retryDelaySeconds);
-            Thread.Sleep(TimeSpan.FromSeconds(retryDelaySeconds));
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal(ex,
-                "Todas as {Max} tentativas de aplicar migrations falharam. A API nao sera iniciada sem schema valido.",
-                maxRetries);
-            throw;
-        }
-    }
-}
 
 app.Run();
 
