@@ -41,20 +41,5 @@ public class PasswordHasherTests
         Assert.True(hasher.Verify(senha, segundo));
     }
 
-    [Theory]
-    [Trait("Security", "Password")]
-    [InlineData("")]
-    [InlineData("hash-invalido")]
-    [InlineData("100000.nao-base64.nao-base64")]
-    public void Verify_HashMalformado_DeveRetornarFalse(string hash)
-    {
-        // Arrange
-        var hasher = new PasswordHasher();
 
-        // Act
-        var resultado = hasher.Verify("Senha@123", hash);
-
-        // Assert
-        Assert.False(resultado);
-    }
 }

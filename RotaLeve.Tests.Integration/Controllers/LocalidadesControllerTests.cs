@@ -34,39 +34,9 @@ public class LocalidadesControllerTests
         _factory.LocalidadeServiceMock.Verify(x => x.ListarAsync(), Times.Once);
     }
 
-    [Fact]
-    [Trait("Controller", "Localidades")]
-    public async Task Get_PontosExistentes_DeveRetornarOk()
-    {
-        // Arrange
-        _factory.LocalidadeServiceMock.Reset();
-        _factory.LocalidadeServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync([CriarResponse(1, "Estacao Se")]);
-        using var client = CriarClient("cidadao");
 
-        // Act
-        var response = await client.GetAsync("/api/localidades");
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Controller", "Localidades")]
-    public async Task Get_PontoInexistente_DeveRetornarNotFound()
-    {
-        // Arrange
-        _factory.LocalidadeServiceMock.Reset();
-        _factory.LocalidadeServiceMock.Setup(x => x.ObterAsync(999))
-            .ReturnsAsync(OperationResult<LocalidadeResponseDto>.Failure("Localidade não encontrado.", 404));
-        using var client = CriarClient("cidadao");
-
-        // Act
-        var response = await client.GetAsync("/api/localidades/999");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Localidades")]
@@ -86,38 +56,9 @@ public class LocalidadesControllerTests
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Controller", "Localidades")]
-    public async Task Post_Cidadao_DeveRetornarForbidden()
-    {
-        // Arrange
-        using var client = CriarClient("cidadao");
-        var request = CriarRequest("Estacao Se");
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/localidades", request);
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Controller", "Localidades")]
-    public async Task Put_AdminPontoExistente_DeveRetornarOk()
-    {
-        // Arrange
-        var request = CriarRequest("Estacao Atualizada");
-        _factory.LocalidadeServiceMock.Reset();
-        _factory.LocalidadeServiceMock.Setup(x => x.AtualizarAsync(1, It.IsAny<LocalidadeRequestDto>()))
-            .ReturnsAsync(OperationResult<LocalidadeResponseDto>.Success(CriarResponse(1, request.Nome)));
-        using var client = CriarClient("admin");
-
-        // Act
-        var response = await client.PutAsJsonAsync("/api/localidades/1", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Localidades")]

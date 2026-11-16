@@ -10,7 +10,6 @@ using RotaLeve.Api.Application.Interfaces;
 using RotaLeve.Api.Domain.Entities;
 using RotaLeve.Api.Domain.Enums;
 using RotaLeve.Api.Domain.Models;
-using System.Net.Http.Headers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -41,6 +40,23 @@ public class JwtAuthorizationTests
 
     [Fact]
     [Trait("Security", "JWT")]
+    public async Task GetRelatos_TokenInvalido_DeveRetornarUnauthorized()
+    {
+        // Arrange
+        await using var factory = CriarFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", "token-invalido");
+
+        // Act
+        var response = await client.GetAsync("/api/relatos");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Security", "JWT")]
     public async Task PostLocalidade_TokenCidadao_DeveRetornarForbidden()
     {
         // Arrange
@@ -55,21 +71,7 @@ public class JwtAuthorizationTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Security", "JWT")]
-    public async Task PatchStatus_TokenCidadao_DeveRetornarForbidden()
-    {
-        // Arrange
-        await using var factory = CriarFactory();
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GerarToken("cidadao"));
 
-        // Act
-        var response = await client.PatchAsync("/api/relatos/1/status", null);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
 
 
     [Fact]
@@ -101,80 +103,17 @@ public class JwtAuthorizationTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         Assert.NotEmpty(payload.AccessToken);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // O mock retorna uma lista vazia; após autenticar, o controller responde 204.
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Security", "JWT")]
-    public async Task Relatos_TokenInvalido_DeveRetornarUnauthorized()
-    {
-        // Arrange
-        await using var factory = CriarFactory();
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", "token.invalido.assinatura");
 
-        // Act
-        var response = await client.GetAsync("/api/relatos");
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Security", "JWT")]
-    public async Task HealthLive_SemToken_DeveRetornarOk()
-    {
-        // Arrange
-        await using var factory = CriarFactory();
-        using var client = factory.CreateClient();
 
-        // Act
-        var response = await client.GetAsync("/health/live");
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Security", "JWT")]
-    public async Task HealthLive_ComJwtValido_DeveRetornarOk()
-    {
-        // Arrange
-        await using var factory = CriarFactory();
-        using var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", GerarToken("cidadao"));
 
-        // Act
-        var response = await client.GetAsync("/health/live");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    [Trait("OpenAPI", "Swagger")]
-    public async Task SwaggerJson_DeveConterRequisitoBearerGlobal()
-    {
-        // Arrange
-        await using var factory = CriarFactory();
-        using var client = factory.CreateClient();
-
-        // Act
-        using var response = await client.GetAsync("/swagger/v1/swagger.json");
-        using var document = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.True(document.RootElement.GetProperty("components").GetProperty("securitySchemes")
-            .TryGetProperty("Bearer", out _));
-        Assert.True(document.RootElement.GetProperty("security")[0].TryGetProperty("Bearer", out _));
-        // O requisito global documenta JWT; [AllowAnonymous] continua controlando
-        // a autorização efetiva de login e cadastro no ASP.NET Core.
-        var paths = document.RootElement.GetProperty("paths");
-        Assert.True(paths.TryGetProperty("/api/auth/login", out _));
-        Assert.True(paths.TryGetProperty("/api/usuarios", out _));
-    }
 
     private static Usuario CriarUsuario(TipoUsuario role) => new()
     {

@@ -64,6 +64,8 @@ A criação e manutenção de usuários fica concentrada no `UsuariosController`
 
 Após a criação, o usuário utiliza `/api/auth/login` para obter o JWT contendo `role=cidadao` ou `role=admin`, conforme o perfil cadastrado.
 
+**Swagger Authorize:** o botão *Authorize* apenas armazena o JWT no navegador para enviá-lo no cabeçalho `Authorization: Bearer <token>`. O texto *Authorized* não valida o token. A validação ocorre quando uma rota protegida recebe a requisição: token ausente/inválido retorna `401`; token válido sem permissão retorna `403`. Para testar, faça login e chame `GET /api/relatos`: com lista vazia e JWT válido, a resposta esperada é `204 No Content`.
+
 Não é necessário inserir usuários manualmente no banco. O endpoint público `POST /api/usuarios` permite criar tanto cidadãos quanto administradores; depois, o login retorna o JWT usado nos endpoints protegidos.
 
 ## Configuração
@@ -82,7 +84,7 @@ Os testes utilizam:
 - testes unitários com mocks dos repositórios/serviços dependentes;
 - testes de integração com `WebApplicationFactory<Program>`, mocks dos serviços da camada Application e `TestAuthHandler`, sem criar um segundo `DbContext` InMemory.
 
-A suíte cobre autenticação JWT, normalização de e-mail no login, hashing de senha no CRUD de usuários, geração de JWT, CRUD administrativo de usuários, regras de localidades, criação/alteração/exclusão de relatos, confirmações, transições de status, expiração, validações HTTP, autorização cidadão/admin, Swagger, Health Check e respostas `429` dos rate limits.
+A suíte cobre autenticação JWT, incluindo token inválido e uso do token emitido pelo login, normalização de e-mail no login, hashing de senha no CRUD de usuários, geração de JWT, CRUD administrativo de usuários, regras de localidades, criação/alteração/exclusão de relatos, confirmações, transições de status, expiração, validações HTTP, autorização cidadão/admin, Swagger, Health Check e respostas `429` dos rate limits.
 
 Execute com:
 ```bash
@@ -257,3 +259,8 @@ Endpoints: `GET/POST /api/localidades`, `GET/PUT/DELETE /api/localidades/{id}`. 
 - O arquivo `scripts/script-bd.sql` mostra o esquema final apenas como referencia e nao deve ser executado antes de iniciar a API com migrations automáticas.
 
 **Atencao:** o caminho anterior `/api/pontos-criticos` foi substituido por `/api/localidades`; clientes precisam atualizar as URLs.
+
+
+## Testes automatizados
+
+A suíte possui **46 casos de teste** (43 métodos `[Fact]` e três casos `[InlineData]` de um `[Theory]`), distribuídos entre testes unitários e testes de integração com xUnit. Os testes seguem o padrão AAA (`Arrange`, `Act`, `Assert`). Para executar: `dotnet test RotaLeve.sln`.

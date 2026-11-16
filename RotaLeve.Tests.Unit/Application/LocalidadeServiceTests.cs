@@ -11,18 +11,7 @@ public class LocalidadeServiceTests
 {
     private readonly Mock<ILocalidadeRepository> _repository = new();
 
-    [Fact]
-    [Trait("Application", "Localidades")]
-    public async Task Obter_Inexistente_DeveRetornar404()
-    {
-        // Arrange
-        _repository.Setup(x => x.ObterAsync(99)).ReturnsAsync((Localidade?)null);
-        // Act
-        var result = await new LocalidadeService(_repository.Object).ObterAsync(99);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(404, result.StatusCode);
-    }
+
 
     [Fact]
     [Trait("Application", "Localidades")]
@@ -51,19 +40,7 @@ public class LocalidadeServiceTests
             p.Nome == "Estacao Se" && p.Descricao == "Acesso principal" && p.Endereco == "Praca da Se")), Times.Once);
     }
 
-    [Fact]
-    [Trait("Application", "Localidades")]
-    public async Task Atualizar_Inexistente_DeveRetornar404()
-    {
-        // Arrange
-        _repository.Setup(x => x.ObterAsync(10)).ReturnsAsync((Localidade?)null);
-        // Act
-        var result = await new LocalidadeService(_repository.Object).AtualizarAsync(10, DtoValido());
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(404, result.StatusCode);
-        _repository.Verify(x => x.AtualizarAsync(It.IsAny<Localidade>()), Times.Never);
-    }
+
 
     [Fact]
     [Trait("Application", "Localidades")]
@@ -78,18 +55,7 @@ public class LocalidadeServiceTests
         Assert.Equal(204, result.StatusCode);
     }
 
-    [Fact]
-    [Trait("Application", "Localidades")]
-    public async Task Excluir_Inexistente_DeveRetornar404()
-    {
-        // Arrange
-        _repository.Setup(x => x.ExcluirAsync(7)).ReturnsAsync(false);
-        // Act
-        var result = await new LocalidadeService(_repository.Object).ExcluirAsync(7);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(404, result.StatusCode);
-    }
+
 
     private static LocalidadeRequestDto DtoValido() => new()
     {

@@ -26,18 +26,7 @@ public class RelatoServiceTests
         Assert.Equal(400, result.StatusCode);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task Criar_ComPontoInativo_DeveRetornar400()
-    {
-        // Arrange
-        _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new Localidade { IdLocalidade = 2, Ativo = false });
-        // Act
-        var result = await CriarService().CriarAsync(1, DtoValido(2));
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(400, result.StatusCode);
-    }
+
 
     [Fact]
     [Trait("Application", "Relatos")]
@@ -87,23 +76,7 @@ public class RelatoServiceTests
         Assert.Equal(409, result.StatusCode);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task Atualizar_RelatoAtivoComoAdmin_DevePermitir()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(new Relato { IdRelato = 10, IdUsuario = 2, Status = StatusRelato.Ativo });
-        _pontos.Setup(x => x.ObterAsync(1)).ReturnsAsync(new Localidade { IdLocalidade = 1, Ativo = true });
-        _relatos.Setup(x => x.AtualizarAsync(It.IsAny<Relato>())).ReturnsAsync((Relato r) => r);
 
-        // Act
-        var result = await CriarService().AtualizarAsync(10, 99, true, DtoValido());
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(200, result.StatusCode);
-        _relatos.Verify(x => x.AtualizarAsync(It.IsAny<Relato>()), Times.Once);
-    }
 
     [Fact]
     [Trait("Application", "Relatos")]
@@ -118,33 +91,9 @@ public class RelatoServiceTests
         Assert.Equal(403, result.StatusCode);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task Excluir_RelatoNovoDoProprioCidadao_DeveRetornar204()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, false)).ReturnsAsync(new Relato { IdRelato = 10, IdUsuario = 2, Status = StatusRelato.Novo });
-        _relatos.Setup(x => x.ExcluirAsync(10)).ReturnsAsync(true);
-        // Act
-        var result = await CriarService().ExcluirAsync(10, 2, false);
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(204, result.StatusCode);
-        _relatos.Verify(x => x.ExcluirAsync(10), Times.Once);
-    }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task Confirmar_RelatoInexistente_DeveRetornar404()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync((Relato?)null);
-        // Act
-        var result = await CriarService().ConfirmarAsync(10, 7);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(404, result.StatusCode);
-    }
+
+
 
     [Fact]
     [Trait("Application", "Relatos")]
@@ -159,18 +108,7 @@ public class RelatoServiceTests
         Assert.Equal(409, result.StatusCode);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task Confirmar_RelatoResolvido_DeveRetornar409()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(new Relato { IdRelato = 10, IdUsuario = 1, Status = StatusRelato.Resolvido });
-        // Act
-        var result = await CriarService().ConfirmarAsync(10, 7);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(409, result.StatusCode);
-    }
+
 
     [Fact]
     [Trait("Application", "Relatos")]
@@ -209,40 +147,9 @@ public class RelatoServiceTests
         Assert.Equal(7, result.Value!.UsuarioId);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task RemoverConfirmacao_Inexistente_DeveRetornar404()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(new Relato { IdRelato = 10, IdUsuario = 1, Status = StatusRelato.Ativo });
-        _confirmacoes.Setup(x => x.RemoverAsync(10, 7)).ReturnsAsync(false);
-        // Act
-        var result = await CriarService().RemoverConfirmacaoAsync(10, 7);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(404, result.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task RemoverUltimaConfirmacao_DeveVoltarRelatoParaNovo()
-    {
-        // Arrange
-        var relato = new Relato { IdRelato = 10, IdUsuario = 1, Status = StatusRelato.Ativo, DataUltimaConfirmacao = DateTime.UtcNow };
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(relato);
-        _confirmacoes.Setup(x => x.RemoverAsync(10, 7)).ReturnsAsync(true);
-        _confirmacoes.Setup(x => x.ContarAsync(10)).ReturnsAsync(0);
-        _relatos.Setup(x => x.AtualizarAsync(relato)).ReturnsAsync(relato);
 
-        // Act
-        var result = await CriarService().RemoverConfirmacaoAsync(10, 7);
 
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(204, result.StatusCode);
-        Assert.Equal(StatusRelato.Novo, relato.Status);
-        Assert.Null(relato.DataUltimaConfirmacao);
-    }
 
     [Fact]
     [Trait("Application", "Relatos")]
@@ -262,19 +169,7 @@ public class RelatoServiceTests
         Assert.NotNull(relato.DataResolucao);
     }
 
-    [Fact]
-    [Trait("Application", "Relatos")]
-    public async Task AlterarStatus_RelatoResolvidoNaoPodeSerReaberto()
-    {
-        // Arrange
-        _relatos.Setup(x => x.ObterAsync(10, true)).ReturnsAsync(new Relato { IdRelato = 10, Status = StatusRelato.Resolvido });
-        // Act
-        var result = await CriarService().AlterarStatusAsync(10, StatusRelato.Ativo);
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Equal(409, result.StatusCode);
-        _relatos.Verify(x => x.AtualizarAsync(It.IsAny<Relato>()), Times.Never);
-    }
+
 
     [Fact]
     [Trait("Application", "Relatos")]

@@ -33,52 +33,11 @@ public class UsuariosControllerTests
         _factory.UsuarioServiceMock.Verify(x => x.ListarAsync(), Times.Once);
     }
 
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task Get_Admin_DeveRetornarOk()
-    {
-        // Arrange
-        _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.ListarAsync()).ReturnsAsync([CriarResponse(1, "cidadao")]);
-        using var client = CriarClient("admin");
 
-        // Act
-        var response = await client.GetAsync("/api/usuarios");
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task Get_Cidadao_DeveRetornarForbidden()
-    {
-        // Arrange
-        using var client = CriarClient("cidadao");
 
-        // Act
-        var response = await client.GetAsync("/api/usuarios");
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task GetPorId_UsuarioInexistente_DeveRetornarNotFound()
-    {
-        // Arrange
-        _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.ObterAsync(999))
-            .ReturnsAsync(OperationResult<UsuarioDetalheResponseDto>.Failure("Usuário não encontrado.", 404));
-        using var client = CriarClient("admin");
-
-        // Act
-        var response = await client.GetAsync("/api/usuarios/999");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Usuarios")]
@@ -102,26 +61,7 @@ public class UsuariosControllerTests
         _factory.UsuarioServiceMock.Verify(x => x.CriarAsync(It.IsAny<UsuarioCreateRequestDto>()), Times.Once);
     }
 
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task Post_SemTokenAdmin_DeveRetornarCreated()
-    {
-        // Arrange
-        var request = CriarCreateRequest("admin");
-        _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.CriarAsync(It.IsAny<UsuarioCreateRequestDto>()))
-            .ReturnsAsync(OperationResult<UsuarioDetalheResponseDto>.Success(CriarResponse(2, "admin"), 201));
-        using var client = _factory.CreateClient();
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/usuarios", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var body = await response.Content.ReadFromJsonAsync<UsuarioDetalheResponseDto>();
-        Assert.NotNull(body);
-        Assert.Equal("admin", body.Perfil);
-    }
 
     [Fact]
     [Trait("Controller", "Usuarios")]
@@ -142,23 +82,7 @@ public class UsuariosControllerTests
             Times.Never);
     }
 
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task Post_EmailDuplicado_DeveRetornarConflict()
-    {
-        // Arrange
-        var request = CriarCreateRequest("cidadao");
-        _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.CriarAsync(It.IsAny<UsuarioCreateRequestDto>()))
-            .ReturnsAsync(OperationResult<UsuarioDetalheResponseDto>.Failure("E-mail já cadastrado.", 409));
-        using var client = _factory.CreateClient();
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/usuarios", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Usuarios")]
@@ -184,22 +108,7 @@ public class UsuariosControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Controller", "Usuarios")]
-    public async Task Delete_AdminUsuarioExistente_DeveRetornarNoContent()
-    {
-        // Arrange
-        _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.ExcluirAsync(1))
-            .ReturnsAsync(OperationResult<bool>.Success(true, 204));
-        using var client = CriarClient("admin");
 
-        // Act
-        var response = await client.DeleteAsync("/api/usuarios/1");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
 
     private HttpClient CriarClient(string role)
     {

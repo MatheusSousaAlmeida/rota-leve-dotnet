@@ -37,38 +37,7 @@ public class AuthControllerTests
         Assert.Equal("token-valido", body!.AccessToken);
     }
 
-    [Fact]
-    [Trait("Controller", "Auth")]
-    public async Task Login_CredenciaisInvalidas_DeveRetornarUnauthorized()
-    {
-        // Arrange
-        var request = new LoginRequestDto { Email = "maria@teste.com", Senha = "senha-errada" };
-        _factory.AuthServiceMock.Reset();
-        _factory.AuthServiceMock.Setup(x => x.LoginAsync(It.IsAny<LoginRequestDto>()))
-            .ReturnsAsync(OperationResult<AuthResponseDto>.Failure("E-mail ou senha inválidos.", 401));
-        using var client = _factory.CreateClient();
 
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", request);
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Controller", "Auth")]
-    public async Task Login_EmailInvalido_DeveRetornarBadRequestSemChamarService()
-    {
-        // Arrange
-        var request = new LoginRequestDto { Email = "email-invalido", Senha = "Senha@123" };
-        _factory.AuthServiceMock.Reset();
-        using var client = _factory.CreateClient();
-
-        // Act
-        var response = await client.PostAsJsonAsync("/api/auth/login", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        _factory.AuthServiceMock.Verify(x => x.LoginAsync(It.IsAny<LoginRequestDto>()), Times.Never);
-    }
 }

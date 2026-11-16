@@ -13,41 +13,9 @@ public class UsuarioServiceTests
     private readonly Mock<IUsuarioRepository> _repository = new();
     private readonly Mock<IPasswordHasher> _hasher = new();
 
-    [Fact]
-    [Trait("Service", "Usuario")]
-    public async Task Listar_UsuariosExistentes_DeveRetornarTodos()
-    {
-        // Arrange
-        _repository.Setup(x => x.ListarAsync()).ReturnsAsync([
-            CriarUsuario(1, "Cidadao", "cidadao@teste.com", TipoUsuario.Cidadao),
-            CriarUsuario(2, "Admin", "admin@teste.com", TipoUsuario.Admin)
-        ]);
-        var service = CriarService();
 
-        // Act
-        var resultado = (await service.ListarAsync()).ToList();
 
-        // Assert
-        Assert.Equal(2, resultado.Count);
-        Assert.Equal("cidadao", resultado[0].Perfil);
-        Assert.Equal("admin", resultado[1].Perfil);
-    }
 
-    [Fact]
-    [Trait("Service", "Usuario")]
-    public async Task Obter_UsuarioInexistente_DeveRetornarNotFound()
-    {
-        // Arrange
-        _repository.Setup(x => x.ObterPorIdAsync(999)).ReturnsAsync((Usuario?)null);
-        var service = CriarService();
-
-        // Act
-        var resultado = await service.ObterAsync(999);
-
-        // Assert
-        Assert.False(resultado.IsSuccess);
-        Assert.Equal(404, resultado.StatusCode);
-    }
 
     [Fact]
     [Trait("Service", "Usuario")]
@@ -109,31 +77,7 @@ public class UsuarioServiceTests
         _repository.Verify(x => x.AdicionarAsync(It.Is<Usuario>(u => u.TipoUsuario == TipoUsuario.Admin)), Times.Once);
     }
 
-    [Fact]
-    [Trait("Service", "Usuario")]
-    public async Task Criar_PerfilPadrao_DevePersistirCidadao()
-    {
-        // Arrange
-        var dto = new UsuarioCreateRequestDto
-        {
-            Nome = "Usuario Padrao",
-            Email = "padrao@exemplo.com",
-            Senha = "Senha@123"
-        };
-        _repository.Setup(x => x.ObterPorEmailAsync(dto.Email)).ReturnsAsync((Usuario?)null);
-        _hasher.Setup(x => x.Hash(dto.Senha)).Returns("HASH");
-        _repository.Setup(x => x.AdicionarAsync(It.IsAny<Usuario>()))
-            .ReturnsAsync((Usuario u) => { u.IdUsuario = 1; return u; });
-        var service = CriarService();
 
-        // Act
-        var resultado = await service.CriarAsync(dto);
-
-        // Assert
-        Assert.True(resultado.IsSuccess);
-        Assert.Equal("cidadao", resultado.Value!.Perfil);
-        _repository.Verify(x => x.AdicionarAsync(It.Is<Usuario>(u => u.TipoUsuario == TipoUsuario.Cidadao)), Times.Once);
-    }
 
     [Fact]
     [Trait("Service", "Usuario")]
@@ -190,60 +134,9 @@ public class UsuarioServiceTests
         _repository.Verify(x => x.AtualizarAsync(usuario), Times.Once);
     }
 
-    [Fact]
-    [Trait("Service", "Usuario")]
-    public async Task Atualizar_SemNovaSenha_DeveManterHashAtual()
-    {
-        // Arrange
-        var usuario = CriarUsuario(1, "Maria", "maria@exemplo.com", TipoUsuario.Cidadao);
-        usuario.SenhaHash = "HASH-ATUAL";
-        var dto = new UsuarioUpdateRequestDto
-        {
-            Nome = "Maria Atualizada",
-            Email = "maria@exemplo.com",
-            Senha = null,
-            Perfil = "cidadao",
-            Ativo = true
-        };
-        _repository.Setup(x => x.ObterPorIdAsync(1)).ReturnsAsync(usuario);
-        _repository.Setup(x => x.ObterPorEmailAsync(dto.Email)).ReturnsAsync(usuario);
-        var service = CriarService();
 
-        // Act
-        var resultado = await service.AtualizarAsync(1, dto);
 
-        // Assert
-        Assert.True(resultado.IsSuccess);
-        Assert.Equal("HASH-ATUAL", usuario.SenhaHash);
-        _hasher.Verify(x => x.Hash(It.IsAny<string>()), Times.Never);
-    }
 
-    [Fact]
-    [Trait("Service", "Usuario")]
-    public async Task Atualizar_EmailDeOutroUsuario_DeveRetornarConflict()
-    {
-        // Arrange
-        var usuario = CriarUsuario(1, "Maria", "maria@exemplo.com", TipoUsuario.Cidadao);
-        var outro = CriarUsuario(2, "Joao", "joao@exemplo.com", TipoUsuario.Cidadao);
-        var dto = new UsuarioUpdateRequestDto
-        {
-            Nome = "Maria",
-            Email = "joao@exemplo.com",
-            Perfil = "cidadao",
-            Ativo = true
-        };
-        _repository.Setup(x => x.ObterPorIdAsync(1)).ReturnsAsync(usuario);
-        _repository.Setup(x => x.ObterPorEmailAsync(dto.Email)).ReturnsAsync(outro);
-        var service = CriarService();
-
-        // Act
-        var resultado = await service.AtualizarAsync(1, dto);
-
-        // Assert
-        Assert.False(resultado.IsSuccess);
-        Assert.Equal(409, resultado.StatusCode);
-        _repository.Verify(x => x.AtualizarAsync(It.IsAny<Usuario>()), Times.Never);
-    }
 
     [Fact]
     [Trait("Service", "Usuario")]

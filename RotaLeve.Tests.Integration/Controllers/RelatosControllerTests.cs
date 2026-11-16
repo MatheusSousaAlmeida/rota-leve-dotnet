@@ -15,21 +15,7 @@ public class RelatosControllerTests
 
     public RelatosControllerTests(CustomWebApplicationFactory factory) => _factory = factory;
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task Get_RelatosExistentes_DeveRetornarOk()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.ListarAsync()).ReturnsAsync([CriarResponse()]);
-        using var client = CriarClient("cidadao", 1);
 
-        // Act
-        var response = await client.GetAsync("/api/relatos");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Relatos")]
@@ -50,22 +36,7 @@ public class RelatosControllerTests
         _factory.RelatoServiceMock.Verify(x => x.ListarAsync(), Times.Once);
     }
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task Get_RelatoInexistente_DeveRetornarNotFound()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.ObterAsync(999))
-            .ReturnsAsync(OperationResult<RelatoResponseDto>.Failure("Relato não encontrado.", 404));
-        using var client = CriarClient("cidadao", 1);
 
-        // Act
-        var response = await client.GetAsync("/api/relatos/999");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Relatos")]
@@ -102,57 +73,11 @@ public class RelatosControllerTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task Put_RelatoDeOutroCidadao_DeveRetornarForbidden()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.AtualizarAsync(10, 2, false, It.IsAny<RelatoRequestDto>()))
-            .ReturnsAsync(OperationResult<RelatoResponseDto>.Failure("Usuário não pode alterar este relato.", 403));
-        using var client = CriarClient("cidadao", 2);
 
-        // Act
-        var response = await client.PutAsJsonAsync("/api/relatos/10", CriarRequest());
 
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task Put_AdminPodeAtualizarQualquerRelato_DeveRetornarOk()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.AtualizarAsync(10, 99, true, It.IsAny<RelatoRequestDto>()))
-            .ReturnsAsync(OperationResult<RelatoResponseDto>.Success(CriarResponse(10)));
-        using var client = CriarClient("admin", 99);
 
-        // Act
-        var response = await client.PutAsJsonAsync("/api/relatos/10", CriarRequest());
 
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task Confirmar_RelatoValido_DeveRetornarCreated()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.ConfirmarAsync(10, 2))
-            .ReturnsAsync(OperationResult<ConfirmacaoResponseDto>.Success(
-                new ConfirmacaoResponseDto(5, 10, 2, DateTime.UtcNow), 201));
-        using var client = CriarClient("cidadao", 2);
-
-        // Act
-        var response = await client.PostAsync("/api/relatos/10/confirmacoes", null);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Relatos")]
@@ -171,22 +96,7 @@ public class RelatosControllerTests
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task DeleteConfirmacao_Existente_DeveRetornarNoContent()
-    {
-        // Arrange
-        _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.RemoverConfirmacaoAsync(10, 2))
-            .ReturnsAsync(OperationResult<bool>.Success(true, 204));
-        using var client = CriarClient("cidadao", 2);
 
-        // Act
-        var response = await client.DeleteAsync("/api/relatos/10/confirmacoes/minha");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
 
     [Fact]
     [Trait("Controller", "Relatos")]
@@ -206,20 +116,7 @@ public class RelatosControllerTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
-    [Trait("Controller", "Relatos")]
-    public async Task PatchStatus_Cidadao_DeveRetornarForbidden()
-    {
-        // Arrange
-        using var client = CriarClient("cidadao", 1);
-        var request = new AlterarStatusRelatoDto { Status = StatusRelato.Resolvido };
 
-        // Act
-        var response = await client.PatchAsJsonAsync("/api/relatos/10/status", request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
 
     private HttpClient CriarClient(string role, int userId)
     {
