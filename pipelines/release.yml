@@ -1,0 +1,134 @@
+# ==============================================================================
+# Rota Leve - Pipeline de RELEASE (CD)
+# Dispara automaticamente quando a pipeline de Build (CI) gera um novo artefato.
+# Recria o container group no ACI (Oracle Free + API) com a imagem do build.
+# ==============================================================================
+trigger: none
+pr: none
+
+resources:
+  pipelines:
+  - pipeline: ci                      # alias
+    source: RotaLeve-Build-CI         # nome exato da pipeline de Build
+    trigger:
+      branches:
+        include: [main]
+
+pool:
+  name: Default
+
+variables:
+  - group: rotaleve-secrets           # ORACLE_ROOT_PASSWORD, ORACLE_APP_USER, ORACLE_APP_PASSWORD, JWT_SECRET (secret)
+  - name: resourceGroup
+    value: rg-rotaleve-gs
+  - name: location
+    value: mexicocentral
+  - name: acrName
+    value: acrrotaleve562012
+  - name: imageRepository
+    value: rotaleve-api
+  - name: containerGroupName
+    value: cg-rotaleve
+  - name: dnsLabel
+    value: rotaleve-api-rm562012
+  - name: apiPort
+    value: '8080'
+
+stages:
+- stage: Release
+  displayName: Deploy no Azure Container Instances
+  jobs:
+  - deployment: DeployACI
+    displayName: Deploy ACI (Oracle + API)
+    environment: producao
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Baixa e mostra o artefato do CI que originou esta release (rastreabilidade)
+          - download: ci
+            artifact: drop
+          - script: |
+              echo "Build de origem: $(resources.pipeline.ci.runName) (id $(resources.pipeline.ci.runID))"
+              ls -l "$(Pipeline.Workspace)/ci/drop"
+            displayName: Artefato recebido do CI
+
+          - task: AzureCLI@2
+            displayName: Recriar container group
+            inputs:
+              azureSubscription: sc-azure-rotaleve
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                export ACR_SERVER=$(az acr show -n "$(acrName)" --query loginServer -o tsv)
+                export ACR_USER=$(az acr credential show -n "$(acrName)" --query username -o tsv)
+                export ACR_PASS=$(az acr credential show -n "$(acrName)" --query "passwords[0].value" -o tsv)
+                echo "##vso[task.setvariable variable=ACR_PASS_M;issecret=true]$ACR_PASS"
+                export IMAGE="$ACR_SERVER/$(imageRepository):$(resources.pipeline.ci.runID)"
+                export LOCATION="$(location)" CG="$(containerGroupName)" DNS="$(dnsLabel)" PORT="$(apiPort)"
+
+                # Manifesto em JSON via Python: serializa senhas com caracteres especiais sem quebrar
+                python3 - <<'PY'
+                import json, os
+                e = os.environ
+                conn = (f"Data Source=localhost:1521/FREEPDB1;User Id={e['ORACLE_APP_USER']};"
+                        f"Password={e['ORACLE_APP_PASSWORD']};")
+                # ACI nao tem depends_on: a API espera o listener + 60s de abertura do PDB
+                wait = ("until (echo > /dev/tcp/localhost/1521) 2>/dev/null; do sleep 5; done; "
+                        "sleep 60; exec dotnet RotaLeve.Api.dll")
+                m = {
+                  "apiVersion": "2021-10-01", "location": e["LOCATION"], "name": e["CG"],
+                  "type": "Microsoft.ContainerInstance/containerGroups",
+                  "properties": {
+                    "osType": "Linux", "restartPolicy": "Always",
+                    "imageRegistryCredentials": [{"server": e["ACR_SERVER"], "username": e["ACR_USER"], "password": e["ACR_PASS"]}],
+                    "containers": [
+                      {"name": "db-oracle", "properties": {
+                        "image": "gvenzl/oracle-free:latest",
+                        "resources": {"requests": {"cpu": 2.0, "memoryInGB": 4.0}},
+                        "ports": [{"port": 1521}],
+                        "environmentVariables": [
+                          {"name": "ORACLE_PASSWORD", "secureValue": e["ORACLE_ROOT_PASSWORD"]},
+                          {"name": "APP_USER", "value": e["ORACLE_APP_USER"]},
+                          {"name": "APP_USER_PASSWORD", "secureValue": e["ORACLE_APP_PASSWORD"]}]}},
+                      {"name": "rotaleve-api", "properties": {
+                        "image": e["IMAGE"],
+                        "resources": {"requests": {"cpu": 1.0, "memoryInGB": 1.5}},
+                        "ports": [{"port": int(e["PORT"])}],
+                        "command": ["bash", "-c", wait],
+                        "environmentVariables": [
+                          {"name": "ASPNETCORE_ENVIRONMENT", "value": "Production"},
+                          {"name": "ASPNETCORE_URLS", "value": f"http://+:{e['PORT']}"},
+                          {"name": "Jwt__Key", "secureValue": e["JWT_SECRET"]},
+                          {"name": "ConnectionStrings__Oracle", "secureValue": conn}]}}],
+                    "ipAddress": {"type": "Public", "dnsNameLabel": e["DNS"],
+                                  "ports": [{"protocol": "TCP", "port": int(e["PORT"])}]}}}
+                json.dump(m, open("/tmp/aci.json", "w"))
+                PY
+
+                az container delete -g "$(resourceGroup)" -n "$CG" --yes || true
+                az container create -g "$(resourceGroup)" --file /tmp/aci.json -o none
+                rm -f /tmp/aci.json
+            env:
+              ORACLE_ROOT_PASSWORD: $(ORACLE_ROOT_PASSWORD)
+              ORACLE_APP_USER: $(ORACLE_APP_USER)
+              ORACLE_APP_PASSWORD: $(ORACLE_APP_PASSWORD)
+              JWT_SECRET: $(JWT_SECRET)
+
+          - task: AzureCLI@2
+            displayName: Smoke test (/health)
+            inputs:
+              azureSubscription: sc-azure-rotaleve
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                FQDN=$(az container show -g "$(resourceGroup)" -n "$(containerGroupName)" --query ipAddress.fqdn -o tsv)
+                echo "URL: http://$FQDN:$(apiPort)/swagger"
+                for i in $(seq 1 40); do
+                  code=$(curl -s -o /dev/null -w '%{http_code}' "http://$FQDN:$(apiPort)/health" || true)
+                  echo "Tentativa $i/40: HTTP $code"
+                  [ "$code" = "200" ] && exit 0
+                  sleep 15
+                done
+                echo "API nao ficou saudavel a tempo"; exit 1

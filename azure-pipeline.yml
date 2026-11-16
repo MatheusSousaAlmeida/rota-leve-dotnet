@@ -1,0 +1,91 @@
+# ==============================================================================
+# Rota Leve - Pipeline de BUILD (CI)
+# Dispara a cada commit na main (que so recebe codigo via PR, pela branch policy).
+# Etapas: restore > build > testes xUnit (resultado + cobertura) > publish >
+#         artefato "drop" > imagem Docker no ACR (tag = BuildId).
+# A Release (pipelines/release.yml) dispara sozinha quando este run termina.
+# ==============================================================================
+trigger:
+  branches:
+    include: [main]
+  paths:
+    exclude: ['README.md', 'docs/*']   # README nao e alteracao de codigo
+
+pr: none
+
+pool:
+  name: Default          # agente self-hosted (Students sem paralelismo hospedado)
+
+variables:
+  - group: rotaleve-secrets
+  - name: buildConfiguration
+    value: Release
+  - name: apiCsproj
+    value: RotaLeve.Api/RotaLeve.Api.csproj
+  - name: testProjects
+    value: '**/*Tests*.csproj'
+  - name: imageRepository
+    value: rotaleve-api
+
+stages:
+- stage: Build
+  displayName: Build, testes e artefato
+  jobs:
+  - job: BuildTest
+    displayName: Build e testes automatizados
+    steps:
+    - task: UseDotNet@2
+      displayName: Instalar .NET 8 SDK
+      inputs: { packageType: sdk, version: 8.0.x }
+
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs: { command: restore, projects: '**/*.csproj' }
+
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: build
+        projects: '**/*.csproj'
+        arguments: '-c $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: Testes unitarios e de integracao (xUnit)
+      inputs:
+        command: test
+        projects: '$(testProjects)'
+        arguments: '-c $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
+        publishTestResults: true          # aba "Tests" do run
+
+    - task: PublishCodeCoverageResults@2
+      displayName: Publicar cobertura de codigo
+      condition: succeededOrFailed()
+      inputs:
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+    - task: DotNetCoreCLI@2
+      displayName: Publish da API
+      inputs:
+        command: publish
+        publishWebProjects: false
+        projects: '$(apiCsproj)'
+        arguments: '-c $(buildConfiguration) --no-build -o $(Build.ArtifactStagingDirectory)/app'
+        zipAfterPublish: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: Publicar artefato (drop)
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/app'
+        artifact: drop
+
+    - task: Docker@2
+      displayName: Build e push da imagem no ACR
+      inputs:
+        containerRegistry: sc-acr-rotaleve
+        repository: $(imageRepository)
+        command: buildAndPush
+        Dockerfile: dockerfiles/Dockerfile
+        buildContext: '$(Build.SourcesDirectory)'
+        tags: |
+          $(Build.BuildId)
+          latest
