@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using RotaLeve.Api.Application.Interfaces;
+using RotaLeve.TestSupport;
 
 namespace RotaLeve.Tests.Integration.Fixtures;
 
@@ -23,7 +24,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Secretkey"] = "t7w0soRP8sIIHWl2P0rbZoZEX7f2rm"
+                ["Secretkey"] = JwtTestConfiguration.GetSecretKey()
             });
         });
 

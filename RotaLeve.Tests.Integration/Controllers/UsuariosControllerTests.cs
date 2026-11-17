@@ -20,8 +20,8 @@ public class UsuariosControllerTests
     {
         // Arrange
         _factory.UsuarioServiceMock.Reset();
-        _factory.UsuarioServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<UsuarioDetalheResponseDto>());
+        _factory.UsuarioServiceMock.Setup(x => x.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new PaginacaoResponseDto<UsuarioDetalheResponseDto>(1, 10, 0, 0, new List<UsuarioDetalheResponseDto>()));
         using var client = CriarClient("admin");
 
         // Act
@@ -30,7 +30,7 @@ public class UsuariosControllerTests
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Empty(await response.Content.ReadAsByteArrayAsync());
-        _factory.UsuarioServiceMock.Verify(x => x.ListarAsync(), Times.Once);
+        _factory.UsuarioServiceMock.Verify(x => x.ListarPaginadoAsync(1, 10), Times.Once);
     }
 
 

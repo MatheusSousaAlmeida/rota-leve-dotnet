@@ -6,6 +6,14 @@ using RotaLeve.Api.Domain.Models;
 namespace RotaLeve.Api.Application.Services;
 public class LocalidadeService(ILocalidadeRepository repository) : ILocalidadeService
 {
+    public async Task<PaginacaoResponseDto<LocalidadeResponseDto>> ListarPaginadoAsync(int pagina, int tamanhoPagina)
+    {
+        var (itens, total) = await repository.ListarPaginadoAsync(pagina, tamanhoPagina);
+        return new PaginacaoResponseDto<LocalidadeResponseDto>(
+            pagina, tamanhoPagina, total, (int)Math.Ceiling(total / (double)tamanhoPagina),
+            itens.Select(ToDto).ToList());
+    }
+
     public async Task<List<LocalidadeResponseDto>> ListarAsync() => (await repository.ListarAsync()).Select(ToDto).ToList();
     public async Task<OperationResult<LocalidadeResponseDto>> ObterAsync(int id)
     {
@@ -22,6 +30,6 @@ public class LocalidadeService(ILocalidadeRepository repository) : ILocalidadeSe
         e.Nome = dto.Nome.Trim(); e.Tipo = dto.Tipo; e.Descricao = dto.Descricao?.Trim(); e.Endereco = dto.Endereco?.Trim(); e.Latitude = dto.Latitude; e.Longitude = dto.Longitude;
         await repository.AtualizarAsync(e); return OperationResult<LocalidadeResponseDto>.Success(ToDto(e));
     }
-    public async Task<OperationResult<bool>> ExcluirAsync(int id) => await repository.ExcluirAsync(id) ? OperationResult<bool>.Success(true, 204) : OperationResult<bool>.Failure("Localidade não encontrado.", 404);
+    public async Task<OperationResult<bool>> ExcluirAsync(int id) => await repository.ExcluirAsync(id) ? OperationResult<bool>.Success(true, 200) : OperationResult<bool>.Failure("Localidade não encontrado.", 404);
     private static LocalidadeResponseDto ToDto(Localidade e) => new(e.IdLocalidade, e.Nome, e.Tipo, e.Descricao, e.Endereco, e.Latitude, e.Longitude, e.Ativo, e.DataCriacao);
 }

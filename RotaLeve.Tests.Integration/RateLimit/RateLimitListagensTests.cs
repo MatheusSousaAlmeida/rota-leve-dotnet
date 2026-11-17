@@ -20,12 +20,12 @@ public class RateLimitListagensTests
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("X-Test-Role", "admin");
         client.DefaultRequestHeaders.Add("X-Test-UserId", "8301");
-        factory.UsuarioServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<UsuarioDetalheResponseDto>());
-        factory.RelatoServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<RelatoResponseDto>());
-        factory.LocalidadeServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<LocalidadeResponseDto>());
+        factory.UsuarioServiceMock.Setup(x => x.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new PaginacaoResponseDto<UsuarioDetalheResponseDto>(1, 10, 0, 0, new List<UsuarioDetalheResponseDto>()));
+        factory.RelatoServiceMock.Setup(x => x.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new PaginacaoResponseDto<RelatoResponseDto>(1, 10, 0, 0, new List<RelatoResponseDto>()));
+        factory.LocalidadeServiceMock.Setup(x => x.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new PaginacaoResponseDto<LocalidadeResponseDto>(1, 10, 0, 0, new List<LocalidadeResponseDto>()));
 
         // Act
         var respostas = new List<HttpResponseMessage>();

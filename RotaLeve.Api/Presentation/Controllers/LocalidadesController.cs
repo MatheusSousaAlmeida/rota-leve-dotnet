@@ -16,16 +16,17 @@ public class LocalidadesController(ILocalidadeService service) : ControllerBase
     [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar localidades ativas",
-        Description = "Retorna todos os localidades ativas cadastrados na plataforma Rota Leve.")]
-    [SwaggerResponse(StatusCodes.Status200OK, "Localidades retornadas com sucesso", typeof(IEnumerable<LocalidadeResponseDto>))]
+        Description = "Retorna localidades ativas em páginas, ordenadas por nome. Parâmetros: pagina (padrão 1, máximo 1000000) e tamanhoPagina (padrão 10, máximo 100).")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Localidades retornadas com sucesso", typeof(PaginacaoResponseDto<LocalidadeResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Parâmetros de paginação inválidos")]
     [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhuma localidade ativa cadastrada")]
     [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para acessar o recurso")]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] PaginacaoRequestDto paginacao)
     {
-        var itens = await service.ListarAsync();
-        return !itens.Any() ? NoContent() : Ok(itens);
+        var resultado = await service.ListarPaginadoAsync(paginacao.Pagina, paginacao.TamanhoPagina);
+        return resultado.Dados.Count == 0 ? NoContent() : Ok(resultado);
     }
 
     [HttpGet("{id:int}")]
@@ -82,7 +83,7 @@ public class LocalidadesController(ILocalidadeService service) : ControllerBase
     [SwaggerOperation(
         Summary = "Desativar localidade",
         Description = "Realiza a exclusão lógica/desativação da localidade informado. Operação restrita ao perfil admin.")]
-    [SwaggerResponse(StatusCodes.Status204NoContent, "Localidade desativada com sucesso")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Localidade desativada com sucesso")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Apenas administradores podem desativar localidades")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Localidade não encontrada")]
@@ -90,7 +91,7 @@ public class LocalidadesController(ILocalidadeService service) : ControllerBase
     {
         var r = await service.ExcluirAsync(id);
         return r.IsSuccess
-            ? NoContent()
+            ? Ok(new { mensagem = "Localidade desativada com sucesso.", localidadeId = id })
             : NotFound(new { erro = r.Error });
     }
 }

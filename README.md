@@ -12,11 +12,11 @@ Backend colaborativo do projeto **Rota Leve**, Global Solution CitizenTech 2026/
 - confirmação comunitária de relatos, com bloqueio de confirmação duplicada por usuário;
 - expiração lógica após 72 horas sem confirmação;
 - rate limiting contra spam;
-- Swagger/OpenAPI;
+- Swagger/OpenAPI com parâmetros de paginação interativos;
 - Health Checks da API e Oracle;
 - testes unitários e de integração com xUnit.
 
-> **Idempotência HTTP:** não foi implementada no escopo atual; depende de alinhamento com o professor. A regra de negócio de confirmação única é garantida separadamente por validação e por `UNIQUE (ID_RELATO, ID_USUARIO)` no Oracle.
+> **Idempotência HTTP:** implementada no `POST /api/relatos` com `Idempotency-Key` e unicidade no Oracle. A regra de confirmação única permanece separada por `UNIQUE (ID_RELATO, ID_USUARIO)`.
 
 ## Tecnologias
 ASP.NET Core 8, Controllers REST, Entity Framework Core 8, Oracle, JWT, ASP.NET Core Rate Limiting, Swagger e xUnit.
@@ -32,6 +32,27 @@ ASP.NET Core 8, Controllers REST, Entity Framework Core 8, Oracle, JWT, ASP.NET 
 8. Relatos `Novo`/`Ativo` expiram após 72h sem nova confirmação.
 9. Cidadão só altera/exclui o próprio relato enquanto ele estiver `Novo`; admin pode administrar qualquer relato.
 
+## Paginação nas listagens
+Os endpoints `GET /api/usuarios` (admin), `GET /api/localidades` e `GET /api/relatos` aceitam os parâmetros opcionais **`pagina`** (padrão `1`, de `1` a `1000000`) e **`tamanhoPagina`** (padrão `10`, de `1` a `100`). Esses parâmetros aparecem e podem ser preenchidos na documentação Swagger UI.
+
+Exemplo: `GET /api/localidades?pagina=2&tamanhoPagina=5`.
+
+Quando a página contém registros, o retorno HTTP é `200 OK` com os metadados e os registros:
+
+```json
+{
+  "pagina": 2,
+  "tamanhoPagina": 5,
+  "totalRegistros": 12,
+  "totalPaginas": 3,
+  "dados": [{ "idLocalidade": 12, "nome": "Praça Central" }]
+}
+```
+
+O exemplo acima mostra somente o formato dos campos (a aplicação retorna itens em `dados` quando a resposta é 200). Se não houver registros na página solicitada, a resposta real é **204 No Content**, sem JSON. Parâmetros inválidos recebem **400 Bad Request** com o erro de validação. A paginação é executada no **Oracle**, com `COUNT`, `ORDER BY`, `SKIP` e `TAKE`, e não em listas carregadas inteiramente na memória. A ordenação é estável: usuários por ID ascendente, localidades por nome e ID, relatos por criação e ID descendentes.
+
+A paginação não altera a autenticação JWT, rate limit, exclusões, idempotência nem as demais regras de negócio. Nenhuma migration adicional é necessária.
+
 ## Rate limiting
 - `GET /api/usuarios`, `GET /api/relatos` e `GET /api/localidades`: **politica `listagens`**, 5 requisições a cada 20 segundos **por endereço IP**, compartilhadas entre as três listagens. A sexta chamada na mesma janela retorna HTTP `429`.
 - `POST /api/relatos`: 5 requisições a cada 10 minutos por usuário autenticado (fallback por IP).
@@ -39,7 +60,7 @@ ASP.NET Core 8, Controllers REST, Entity Framework Core 8, Oracle, JWT, ASP.NET 
 - excesso retorna HTTP `429 Too Many Requests`.
 
 ## Executar
-1. Preencha `User Id` e `Password` em `ConnectionStrings:OracleDbConnection`. A configuração JWT utiliza a chave `Secretkey`.
+1. Preencha `User Id` e `Password` em `ConnectionStrings:OracleDbConnection` e configure `Secretkey` no `RotaLeve.Api/appsettings.json` (ou por variável de ambiente). Utilize uma chave JWT própria e forte; o arquivo entregue não contém uma chave real.
 2. Execute a aplicação. O Swagger inicia mesmo quando o Oracle estiver indisponível. As migrations são executadas automaticamente em segundo plano quando houver conexão.
 3. Execute:
    ```bash
@@ -51,7 +72,7 @@ ASP.NET Core 8, Controllers REST, Entity Framework Core 8, Oracle, JWT, ASP.NET 
 ## Usuários e autenticação
 O `AuthController` é responsável exclusivamente pela autenticação e emissão do JWT por meio de `POST /api/auth/login`.
 
-A criação e manutenção de usuários fica concentrada no `UsuariosController`. O `POST /api/usuarios` é público e nunca exige JWT. O campo `perfil` pode ser `cidadao` ou `admin`, com `cidadao` como valor padrão. As operações de consulta, atualização e desativação continuam restritas ao perfil `admin`.
+A criação e manutenção de usuários fica concentrada no `UsuariosController`. O `POST /api/usuarios` é público e nunca exige JWT. O campo `perfil` pode ser `cidadao` ou `admin`, com `cidadao` como valor padrão. As operações de consulta, atualização e exclusão definitiva continuam restritas ao perfil `admin`.
 
 ```json
 {
@@ -74,9 +95,11 @@ Os arquivos `appsettings.json` e `appsettings.Development.json` definem as confi
 - `Secretkey` para assinatura JWT;
 - `Logging` com os níveis padrão da aplicação.
 
-Por segurança operacional, `User Id` e `Password` permanecem vazios no repositório e devem ser preenchidos localmente.
+Por segurança operacional, `User Id`, `Password` e `Secretkey` permanecem vazios no repositório e devem ser preenchidos localmente. Não envie credenciais reais ao controle de versão.
 
 ## Testes automatizados
+**JWT nos testes:** os dois projetos xUnit copiam automaticamente `RotaLeve.Api/appsettings.json` para seus diretórios de saída durante o build, com o nome `appsettings.RotaLeveApi.json`. A classe compartilhada `TestSupport/JwtTestConfiguration.cs` le a `Secretkey` desse arquivo e permite sobrescreve-la pela variavel de ambiente `Secretkey`. Assim, basta configurar a chave no projeto da API antes de executar `dotnet test`; nenhum valor de JWT fica duplicado nos testes. Se a chave estiver vazia, o teste falha com uma mensagem explicando como configura-la. O teste `Excluir_UsuarioExistente_DeveRemoverDefinitivamente` espera `200 OK`, conforme o endpoint DELETE.
+
 Os testes utilizam:
 - xUnit + Moq;
 - organização explícita no padrão **AAA (Arrange, Act, Assert)**;
@@ -118,7 +141,9 @@ dotnet restore RotaLeve.sln
 - `GET /api/usuarios/{id}` (admin)
 - `POST /api/usuarios` (público, sem JWT)
 - `PUT /api/usuarios/{id}` (admin)
-- `DELETE /api/usuarios/{id}` (admin, exclusão lógica)
+- `DELETE /api/usuarios/{id}` (admin, exclusão física e permanente)
+
+O `DELETE` de usuário remove fisicamente o registro de `USUARIO`. Para respeitar as chaves estrangeiras Oracle, também exclui as confirmações feitas pelo usuário, seus relatos e as confirmações feitas por outras pessoas nesses relatos. A operação é transacional: em caso de falha, nenhuma exclusão é confirmada. Retorna `200 OK` com mensagem de confirmação quando bem-sucedida ou `404 Not Found` se o usuário não existir. **Essa exclusão é irreversível; não é uma desativação.**
 
 ### Localidades
 - `GET /api/localidades`
@@ -135,6 +160,8 @@ dotnet restore RotaLeve.sln
 - `DELETE /api/relatos/{id}`
 - `POST /api/relatos/{id}/confirmacoes`
 - `DELETE /api/relatos/{id}/confirmacoes/minha`
+
+**Padrão DELETE:** as quatro operações de exclusão/remoção retornam `200 OK` com `mensagem` e o identificador correspondente em caso de sucesso; registros inexistentes retornam `404 Not Found`. O código `204 No Content` é utilizado nas listagens sem registros. A exclusão de usuário é permanente; a exclusão de localidade permanece lógica (desativação).
 - `PATCH /api/relatos/{id}/status` (admin)
 
 ## Uso de IA generativa
@@ -262,5 +289,24 @@ Endpoints: `GET/POST /api/localidades`, `GET/PUT/DELETE /api/localidades/{id}`. 
 
 
 ## Testes automatizados
+**JWT nos testes:** os dois projetos xUnit copiam automaticamente `RotaLeve.Api/appsettings.json` para seus diretórios de saída durante o build, com o nome `appsettings.RotaLeveApi.json`. A classe compartilhada `TestSupport/JwtTestConfiguration.cs` le a `Secretkey` desse arquivo e permite sobrescreve-la pela variavel de ambiente `Secretkey`. Assim, basta configurar a chave no projeto da API antes de executar `dotnet test`; nenhum valor de JWT fica duplicado nos testes. Se a chave estiver vazia, o teste falha com uma mensagem explicando como configura-la. O teste `Excluir_UsuarioExistente_DeveRemoverDefinitivamente` espera `200 OK`, conforme o endpoint DELETE.
+
 
 A suíte possui **46 casos de teste** (43 métodos `[Fact]` e três casos `[InlineData]` de um `[Theory]`), distribuídos entre testes unitários e testes de integração com xUnit. Os testes seguem o padrão AAA (`Arrange`, `Act`, `Assert`). Para executar: `dotnet test RotaLeve.sln`.
+
+## Idempotência na criação de relatos
+
+O endpoint `POST /api/relatos` exige o header `Idempotency-Key` (ASCII visível, até 200 caracteres).
+O servidor calcula SHA-256 de `usuarioId:chave`, persistido em `RELATO.CHAVE_IDEMPOTENCIA` (VARCHAR2(64), índice UNIQUE), e SHA-256 do conteúdo normalizado em `RELATO.HASH_REQUISICAO`.
+
+- Primeira criação com chave inédita: `201 Created`.
+- Repetição com mesma chave, mesmo usuário e mesmo conteúdo: `200 OK`, mesmo relato, sem novo INSERT.
+- Repetição com mesma chave e conteúdo diferente: `409 Conflict`.
+- Header ausente ou inválido: `400 Bad Request`.
+- Usuários diferentes podem reutilizar o mesmo texto de chave sem colisão.
+- Uma violação de unicidade por duas criações simultâneas é tratada recuperando o registro já gravado.
+
+A migration `20261116000100_AddRelatoIdempotencia` adiciona as colunas sem apagar relatos existentes.
+Relatos antigos ficam com `CHAVE_IDEMPOTENCIA = NULL`, o que o índice UNIQUE do Oracle permite.
+Para testes no Swagger, envie um valor novo de `Idempotency-Key` no POST de relato e repita exatamente a mesma chamada.
+Se um relato for excluído, sua chave deixa de existir: o mecanismo preserva idempotência enquanto o registro permanece no banco.

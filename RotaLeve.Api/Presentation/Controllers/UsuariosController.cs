@@ -16,16 +16,17 @@ public class UsuariosController(IUsuarioService service) : ControllerBase
     [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar usuários",
-        Description = "Retorna todos os usuários cadastrados na plataforma, incluindo usuários ativos e inativos. Operação restrita ao perfil admin.")]
-    [SwaggerResponse(StatusCodes.Status200OK, "Usuários retornados com sucesso", typeof(IEnumerable<UsuarioDetalheResponseDto>))]
+        Description = "Retorna usuários ativos e inativos em páginas. Parâmetros: pagina (padrão 1, máximo 1000000) e tamanhoPagina (padrão 10, máximo 100). Restrito a admin.")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Usuários retornados com sucesso", typeof(PaginacaoResponseDto<UsuarioDetalheResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Parâmetros de paginação inválidos")]
     [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhum usuário cadastrado")]
     [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Apenas administradores podem consultar a lista de usuários")]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] PaginacaoRequestDto paginacao)
     {
-        var itens = await service.ListarAsync();
-        return !itens.Any() ? NoContent() : Ok(itens);
+        var resultado = await service.ListarPaginadoAsync(paginacao.Pagina, paginacao.TamanhoPagina);
+        return resultado.Dados.Count == 0 ? NoContent() : Ok(resultado);
     }
 
     [HttpGet("{id:int}")]
@@ -78,15 +79,15 @@ public class UsuariosController(IUsuarioService service) : ControllerBase
 
     [HttpDelete("{id:int}")]
     [SwaggerOperation(
-        Summary = "Desativar usuário",
-        Description = "Realiza exclusão lógica do usuário, definindo Ativo=false. O histórico relacionado ao usuário é preservado. Operação restrita ao perfil admin.")]
-    [SwaggerResponse(StatusCodes.Status204NoContent, "Usuário desativado com sucesso")]
+        Summary = "Excluir usuário definitivamente",
+        Description = "Exclui definitivamente o usuário do Oracle, suas confirmações e seus relatos (incluindo confirmações nesses relatos). Operação irreversível, restrita ao perfil admin.")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Usuário excluído definitivamente")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
-    [SwaggerResponse(StatusCodes.Status403Forbidden, "Apenas administradores podem desativar usuários")]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "Apenas administradores podem excluir usuários")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Usuário não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
         var r = await service.ExcluirAsync(id);
-        return r.IsSuccess ? NoContent() : NotFound(new { erro = r.Error });
+        return r.IsSuccess ? Ok(new { mensagem = "Usuário excluído definitivamente.", usuarioId = id }) : NotFound(new { erro = r.Error });
     }
 }

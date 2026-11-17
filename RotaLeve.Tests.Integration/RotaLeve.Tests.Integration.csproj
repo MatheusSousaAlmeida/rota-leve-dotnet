@@ -22,6 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestSupport\JwtTestConfiguration.cs" Link="TestSupport\JwtTestConfiguration.cs" />
+    <None Include="..\RotaLeve.Api\appsettings.json" Link="appsettings.RotaLeveApi.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

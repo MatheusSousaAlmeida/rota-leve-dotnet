@@ -89,6 +89,10 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
+    // Inclui comentarios XML dos DTOs, visiveis nos parametros do Swagger UI.
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, "RotaLeve.Api.xml");
+    if (File.Exists(xmlPath)) c.IncludeXmlComments(xmlPath);
+
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Rota Leve API",
