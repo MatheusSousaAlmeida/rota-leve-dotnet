@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using RotaLeve.Api.Application.Interfaces;
-using RotaLeve.TestSupport;
+using RotaLeve.Tests.Integration.Configuration;
 
 namespace RotaLeve.Tests.Integration.Fixtures;
 

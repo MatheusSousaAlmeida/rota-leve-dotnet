@@ -1,15 +1,17 @@
 using Microsoft.Extensions.Configuration;
 
-namespace RotaLeve.TestSupport;
+namespace RotaLeve.Tests.Integration.Configuration;
 
 /// <summary>
-/// Obtem a chave JWT usada pela API, sem manter segredos duplicados nos testes.
+/// Le a Secretkey da configuracao da API, com fallback ficticio exclusivo dos testes.
 /// O arquivo de configuracao e copiado do projeto RotaLeve.Api durante o build.
 /// Variaveis de ambiente tem precedencia sobre o appsettings.json.
 /// </summary>
 public static class JwtTestConfiguration
 {
     private const string ApiSettingsFile = "appsettings.RotaLeveApi.json";
+    // Exclusivamente para testes automatizados. Nunca deve ser utilizada pela API real.
+    private const string TestOnlySecretKey = "RotaLeve-Testes-Automatizados-JWT-Chave-Ficticia-2026-001";
 
     public static string GetSecretKey()
     {
@@ -20,12 +22,6 @@ public static class JwtTestConfiguration
             .Build();
 
         var secret = configuration["Secretkey"];
-        if (string.IsNullOrWhiteSpace(secret))
-            throw new InvalidOperationException(
-                "Secretkey nao configurada. Preencha 'Secretkey' no " +
-                "RotaLeve.Api/appsettings.json antes de executar os testes, " +
-                "ou configure a variavel de ambiente Secretkey.");
-
-        return secret;
+        return string.IsNullOrWhiteSpace(secret) ? TestOnlySecretKey : secret;
     }
 }

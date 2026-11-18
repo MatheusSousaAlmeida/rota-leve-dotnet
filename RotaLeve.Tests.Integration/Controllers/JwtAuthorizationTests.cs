@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using RotaLeve.Api.Infrastructure.Security;
-using RotaLeve.TestSupport;
+using RotaLeve.Tests.Integration.Configuration;
 
 namespace RotaLeve.Tests.Integration.Controllers;
 

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using RotaLeve.Api.Domain.Entities;
 using RotaLeve.Api.Domain.Enums;
 using RotaLeve.Api.Infrastructure.Security;
-using RotaLeve.TestSupport;
+using RotaLeve.Tests.Unit.Configuration;
 
 namespace RotaLeve.Tests.Unit.Security;
 
