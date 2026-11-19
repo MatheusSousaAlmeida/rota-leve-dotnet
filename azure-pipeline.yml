@@ -64,13 +64,14 @@ stages:
         summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
 
     - task: DotNetCoreCLI@2
-      displayName: Publish da API
+      displayName: Testes unitarios e de integracao (xUnit)
       inputs:
-        command: publish
-        publishWebProjects: false
-        projects: '$(apiCsproj)'
-        arguments: '-c $(buildConfiguration) --no-build -o $(Build.ArtifactStagingDirectory)/app'
-        zipAfterPublish: true
+        command: test
+        projects: '$(testProjects)'
+        arguments: '-c $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
+        publishTestResults: true
+      env:
+        Secretkey: $(JWT_SECRET)
 
     - task: PublishPipelineArtifact@1
       displayName: Publicar artefato (drop)
