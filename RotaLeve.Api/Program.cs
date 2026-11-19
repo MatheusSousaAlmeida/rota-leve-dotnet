@@ -100,7 +100,7 @@ builder.Services.AddSwaggerGen(c =>
 
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Rota Leve API",
+        Title = "Rota Leve API - GS 2026 V2",
         Version = "v1",
         Description = "API colaborativa de acessibilidade urbana do projeto CitizenTech Rota Leve."
     });
