@@ -100,8 +100,8 @@ stages:
                         "environmentVariables": [
                           {"name": "ASPNETCORE_ENVIRONMENT", "value": "Production"},
                           {"name": "ASPNETCORE_URLS", "value": f"http://+:{e['PORT']}"},
-                          {"name": "Jwt__Key", "secureValue": e["JWT_SECRET"]},
-                          {"name": "ConnectionStrings__Oracle", "secureValue": conn}]}}],
+                          {"name": "Secretkey", "secureValue": e["JWT_SECRET"]},
+                          {"name": "ConnectionStrings__OracleDbConnection", "secureValue": conn}]}}],
                     "ipAddress": {"type": "Public", "dnsNameLabel": e["DNS"],
                                   "ports": [{"protocol": "TCP", "port": int(e["PORT"])}]}}}
                 json.dump(m, open("/tmp/aci.json", "w"))
@@ -117,7 +117,7 @@ stages:
               JWT_SECRET: $(JWT_SECRET)
 
           - task: AzureCLI@2
-            displayName: Smoke test (/health)
+            displayName: Smoke test (/health/ready)
             inputs:
               azureSubscription: sc-azure-rotaleve
               scriptType: bash
@@ -126,7 +126,7 @@ stages:
                 FQDN=$(az container show -g "$(resourceGroup)" -n "$(containerGroupName)" --query ipAddress.fqdn -o tsv)
                 echo "URL: http://$FQDN:$(apiPort)/swagger"
                 for i in $(seq 1 40); do
-                  code=$(curl -s -o /dev/null -w '%{http_code}' "http://$FQDN:$(apiPort)/health" || true)
+                  code=$(curl -s -o /dev/null -w '%{http_code}' "http://$FQDN:$(apiPort)/health/ready" || true)
                   echo "Tentativa $i/40: HTTP $code"
                   [ "$code" = "200" ] && exit 0
                   sleep 15

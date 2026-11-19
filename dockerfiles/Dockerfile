@@ -10,6 +10,7 @@ RUN dotnet publish RotaLeve.Api/RotaLeve.Api.csproj -c Release -o /out --no-rest
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /out .
+RUN mkdir -p /app/logs && chown -R app:app /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 # usuario sem privilegio de root (imagem oficial ja traz o usuario app)
