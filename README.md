@@ -504,3 +504,121 @@ Enzo Monteiro Maciel | 563734
 Gabriel Bebé Silva | 562012
 Matheus de Almeida Sousa | 563557
 Paulo Estalise | 563811
+## ☁️ DevOps – CI/CD no Azure DevOps
+
+A API .NET do Rota Leve é publicada automaticamente na Azure a cada merge na `main`, usando **Azure Boards + Azure Repos + Azure Pipelines**. Toda a infraestrutura é criada por **script Azure CLI**.
+
+### Arquitetura macro
+
+![Arquitetura Rota Leve](docs/arquitetura.png)
+
+**Fluxo:** Task no Azure Boards → branch → commit (`AB#id`) → Pull Request com revisão → merge na `main` → **Pipeline de Build (CI)** → artefato `drop` + imagem no ACR → **Pipeline de Release (CD)** dispara sozinha → container group no ACI (API + Oracle) → smoke test em `/health/ready`.
+
+### Resumo
+
+| Item | Valor |
+|---|---|
+| Organização / projeto | `Challenge-FIAP-2TDSPO` / `GS-RotaLeve` (privado, Git, Scrum) |
+| Repositório | Azure Repos `rota-leve-api` |
+| Build (CI) | `azure-pipeline.yml` (raiz) – pipeline `RotaLeve-Build-CI` |
+| Release (CD) | `pipelines/release.yml` – pipeline `RotaLeve-Release-CD` |
+| Registry | Azure Container Registry `acrrotaleve562012` |
+| Execução | Azure Container Instances `cg-rotaleve` (API .NET 8 + Oracle Database Free) |
+| Região / RG | `mexicocentral` / `rg-rotaleve-gs` |
+| Agente | Self-hosted (pool `Default`) |
+| URL | `http://rotaleve-api-rm562012.mexicocentral.azurecontainer.io:8080/swagger` |
+
+### Estrutura de DevOps no repositório
+
+```
+azure-pipeline.yml              # Pipeline de Build (CI)
+pipelines/release.yml           # Pipeline de Release (CD)
+dockerfiles/Dockerfile          # Imagem multi-stage da API
+.dockerignore
+scripts/infra-azure-cli.sh      # Provisionamento (RG, ACR, Service Principal)
+scripts/setup-azure-devops.sh   # Projeto, Repos, políticas da main e pipelines
+scripts/script-bd.sql           # DDL Oracle
+```
+
+### Pipeline de Build (CI)
+
+Dispara a cada commit na `main` (que só recebe código via PR). Alterações apenas em `README.md` e `docs/` não disparam o build.
+
+| Etapa | O que faz |
+|---|---|
+| Instalar .NET 8 SDK | `UseDotNet@2` |
+| Restore / Build | `dotnet restore` e `dotnet build -c Release` |
+| Testes automatizados | xUnit (unitários + integração); resultados na aba **Tests** |
+| Cobertura | `XPlat Code Coverage` publicada na aba **Code Coverage** |
+| Publish | `dotnet publish` da API em `.zip` |
+| Artefato | `PublishPipelineArtifact` → artefato **`drop`** |
+| Imagem Docker | build e push no ACR com tags `$(Build.BuildId)` e `latest` |
+
+### Pipeline de Release (CD)
+
+Dispara automaticamente quando o Build termina com um novo artefato (`resources.pipelines`), usando o environment `producao`.
+
+| Etapa | O que faz |
+|---|---|
+| Download | Baixa o artefato `drop` do build de origem (rastreabilidade) |
+| Recriar container group | Gera o manifesto do ACI e recria o container group com a imagem `rotaleve-api:<BuildId>` + Oracle Free |
+| Smoke test | Até 40 tentativas em `/health/ready` (API + conexão Oracle) |
+
+### Variáveis e segredos
+
+Nenhuma senha fica no código. Os valores ficam no **Variable Group `rotaleve-secrets`** (marcados como secret) e chegam aos scripts apenas via `env:`; no ACI são `secureValue`.
+
+| Variável | Uso |
+|---|---|
+| `ORACLE_ROOT_PASSWORD` | Senha administrativa do Oracle no container |
+| `ORACLE_APP_USER` | Usuário/schema da aplicação |
+| `ORACLE_APP_PASSWORD` | Senha do usuário da aplicação |
+| `JWT_SECRET` | Chave de assinatura do JWT (`Secretkey`) |
+
+**Service connections:** `sc-azure-rotaleve` (Azure Resource Manager, Service Principal com *Contributor* restrito ao resource group – menor privilégio) e `sc-acr-rotaleve` (Docker Registry).
+
+### Branch principal protegida
+
+- Mínimo de 1 revisor (o autor pode aprovar a própria PR – simulação)
+- Work item vinculado obrigatório
+- Revisor padrão: RM562012
+
+### Como reproduzir
+
+```bash
+# 1. Infraestrutura (Git Bash: export MSYS_NO_PATHCONV=1)
+export SUBSCRIPTION_ID="<id-da-assinatura>" RM="<rm>"
+./scripts/infra-azure-cli.sh --sp        # RG + ACR + Service Principal
+
+# 2. Azure DevOps (az extension add --name azure-devops ; az devops login)
+export ORG_URL="https://dev.azure.com/<org>" REVIEWER_EMAIL="<email>"
+./scripts/setup-azure-devops.sh          # projeto, repo, políticas e pipelines
+
+# 3. No portal: Variable Group rotaleve-secrets, service connections e environment producao
+
+# 4. Merge de uma PR na main → Build → Release
+
+# Encerrar custos (mantém ACR e RG)
+./scripts/infra-azure-cli.sh --destroy
+```
+
+### Evidência de persistência (SELECT no banco)
+
+```bash
+az container exec -g rg-rotaleve-gs -n cg-rotaleve --container-name db-oracle --exec-command "sqlplus / as sysdba"
+```
+```sql
+ALTER SESSION SET CONTAINER = FREEPDB1;
+ALTER SESSION SET CURRENT_SCHEMA = RM562012;
+SELECT ID_LOCALIDADE, NOME, TIPO, ENDERECO, ATIVO FROM LOCALIDADE ORDER BY ID_LOCALIDADE;
+SELECT ID_RELATO, ID_LOCALIDADE, TIPO, DESCRICAO, STATUS FROM RELATO ORDER BY ID_RELATO;
+```
+
+
+## 🤖 Declaração de uso de IA generativa
+
+| Ferramenta | Para quê |
+|---|---|
+| Claude (Anthropic) | Apoio na escrita dos scripts Azure CLI, pipelines YAML, diagnóstico de erros de build/deploy e revisão desta documentação |
+
+Todo o conteúdo gerado foi revisado, executado e validado pelo grupo antes do commit.
