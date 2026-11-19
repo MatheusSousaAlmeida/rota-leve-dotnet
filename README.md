@@ -40,6 +40,8 @@ A implementação utiliza **ASP.NET Core Web API com Controllers**, com:
 15. [Docker](#docker)
 16. [Segurança e observações para entrega](#segurança-e-observações-para-entrega)
 17. [Integrantes](#integrantes)
+18. [DevOps – CI/CD no Azure DevOps](#devops--cicd-no-azure-devops)
+19. [Vídeo de demonstração](#vídeo-de-demonstração)
 
 ---
 
@@ -129,8 +131,6 @@ A localidade não representa necessariamente um problema: ela existe independent
 | Resiliência e segurança HTTP | ASP.NET Core Rate Limiting; header `Idempotency-Key` |
 | Observabilidade | Serilog, Correlation ID, Health Checks |
 | Testes | xUnit, Moq, WebApplicationFactory, testes AAA |
-
-Não há dependência de MongoDB nesta implementação.
 
 ---
 
@@ -228,7 +228,7 @@ Resposta ilustrativa quando há registros (`200 OK`):
 
 Quando a página solicitada não possui registros, a API responde **`204 No Content`**, sem corpo. Parâmetros inválidos retornam `400 Bad Request`.
 
-Os DTOs usam Data Annotations e o comportamento de validação do `[ApiController]`, complementados pelas validações dos serviços. A validação também contempla regras de domínio e valores permitidos para tipos e status.
+Os DTOs utilizam Data Annotations, incluindo `[Required]` e `[EnumDataType]`, além da validação automática do `[ApiController]` e das regras de negócio nos serviços. Os campos `Tipo` de localidades e relatos e o campo `Status` aceitam apenas valores definidos nos respectivos enums; valores inválidos retornam `400 Bad Request`.
 
 ---
 
@@ -291,7 +291,9 @@ O Entity Framework Core contém as migrations na pasta `RotaLeve.Api/Infrastruct
 - O serviço de migrations tenta conectar-se novamente em caso de indisponibilidade temporária.
 - Em execução com ambiente `Testing`, as migrations automáticas são ignoradas.
 - O arquivo `scripts/script-bd.sql` é uma **referência do esquema**, não um script que deve ser executado em paralelo à criação automática por migrations.
-- A migration de idempotência acrescenta `CHAVE_IDEMPOTENCIA` e `HASH_REQUISICAO` à tabela `RELATO`.
+- A migration inicial consolidada (`InitialCreate`) cria `USUARIO`, `LOCALIDADE`, `RELATO` e `CONFIRMACAO_RELATO`, incluindo `RELATO.CHAVE_IDEMPOTENCIA`, `RELATO.HASH_REQUISICAO` e o índice único de idempotência.
+
+A migration consolidada destina-se à criação completa do esquema em um banco vazio. Se o schema Oracle já tiver migrations anteriores registradas, verifique o estado das tabelas e do histórico de migrations antes de atualizá-lo; não remova dados nem registros de `__EFMigrationsHistory` sem uma análise prévia.
 
 Para criar uma migration futura, a partir da raiz do projeto:
 
@@ -417,7 +419,7 @@ Os projetos `RotaLeve.Tests.Unit` e `RotaLeve.Tests.Integration` utilizam **xUni
 
 Há testes para regras de usuários, localidades, relatos, confirmações, emissão e validação de JWT, paginação, limite de requisições e Health Checks. Os testes de integração verificam os contratos HTTP dos Controllers.
 
-**Chave JWT nos testes:** `RotaLeve.Tests.Unit/Configuration/JwtTestConfiguration.cs` e `RotaLeve.Tests.Integration/Configuration/JwtTestConfiguration.cs` leem `Secretkey` da configuração da API e aceita a variável de ambiente correspondente. Na ausência de chave, utiliza um valor fictício exclusivo dos testes; a aplicação real não possui esse fallback.
+**Chave JWT nos testes:** `RotaLeve.Tests.Unit/Configuration/JwtTestConfiguration.cs` e `RotaLeve.Tests.Integration/Configuration/JwtTestConfiguration.cs` leem `Secretkey` da configuração da API e aceitam a variável de ambiente correspondente. Na ausência de chave, utilizam um valor fictício exclusivo dos testes; a aplicação real não possui esse fallback.
 
 Para executar a suíte:
 
@@ -478,7 +480,7 @@ Exemplo de construção da imagem, a partir da raiz do projeto:
 docker build -f RotaLeve.Api/Dockerfile -t rotaleve-api .
 ```
 
-Ao executar a imagem, forneça `Secretkey` e `ConnectionStrings__OracleDbConnection` por variáveis de ambiente ou um mecanismo apropriado de segredos; não as grave no Dockerfile. O projeto não pressupõe a existência de pipeline CI/CD ou implantação cloud previamente configurada.
+Ao executar a imagem, forneça `Secretkey` e `ConnectionStrings__OracleDbConnection` por variáveis de ambiente ou um mecanismo apropriado de segredos; não as grave no Dockerfile.
 
 ---
 
@@ -488,23 +490,23 @@ Ao executar a imagem, forneça `Secretkey` e `ConnectionStrings__OracleDbConnect
 - O cadastro público de administradores foi mantido **apenas para demonstração acadêmica**; não deve ser exposto dessa maneira em produção.
 - O script SQL em `scripts/script-bd.sql` é material de referência; a criação do esquema fica a cargo das migrations da aplicação.
 - O projeto contém testes xUnit e não depende de um script PowerShell externo para testar JWT.
-- IA generativa foi utilizada como apoio ao desenvolvimento e à revisão do código; os integrantes devem conhecer e compreender a implementação entregue.
 - Execute `dotnet build` e `dotnet test` antes do envio final, além de conferir a disponibilidade do Oracle e o comportamento dos endpoints no Swagger.
 
 ---
 
 ## Integrantes
 
-Preencher os nomes completos e RMs dos integrantes do grupo antes da entrega.
-
 | Nome completo | RM |
 |---|---|
-Emanuel Italo |  561337
-Enzo Monteiro Maciel | 563734
-Gabriel Bebé Silva | 562012
-Matheus de Almeida Sousa | 563557
-Paulo Estalise | 563811
-## ☁️ DevOps – CI/CD no Azure DevOps
+| Emanuel Italo | 561337 |
+| Enzo Monteiro Maciel | 563734 |
+| Gabriel Bebé Silva | 562012 |
+| Matheus de Almeida Sousa | 563557 |
+| Paulo Estalise | 563811 |
+
+---
+
+## DevOps – CI/CD no Azure DevOps
 
 A API .NET do Rota Leve é publicada automaticamente na Azure a cada merge na `main`, usando **Azure Boards + Azure Repos + Azure Pipelines**. Toda a infraestrutura é criada por **script Azure CLI**.
 
@@ -618,6 +620,7 @@ SELECT ID_RELATO, ID_LOCALIDADE, TIPO, DESCRICAO, STATUS FROM RELATO ORDER BY ID
 ### Vídeo de demonstração
 
 ▶️ https://www.youtube.com/watch?v=ulNcV7ejGsw
+
 
 ## 🤖 Declaração de uso de IA generativa
 
