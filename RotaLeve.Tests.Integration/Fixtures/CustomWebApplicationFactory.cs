@@ -12,6 +12,12 @@ namespace RotaLeve.Tests.Integration.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
+        static CustomWebApplicationFactory()
+    {
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("Secretkey")))
+            Environment.SetEnvironmentVariable("Secretkey", JwtTestConfiguration.GetSecretKey());
+    }
+    
     public Mock<IAuthService> AuthServiceMock { get; } = new();
     public Mock<ILocalidadeService> LocalidadeServiceMock { get; } = new();
     public Mock<IRelatoService> RelatoServiceMock { get; } = new();
