@@ -6,7 +6,7 @@ namespace RotaLeve.Api.Application.Dtos;
 public class LocalidadeRequestDto
 {
     [Required, StringLength(140)] public string Nome { get; set; } = string.Empty;
-    [Required] public TipoLocalidade Tipo { get; set; }
+    [Required, EnumDataType(typeof(TipoLocalidade))] public TipoLocalidade Tipo { get; set; }
     [StringLength(400)] public string? Descricao { get; set; }
     [StringLength(250)] public string? Endereco { get; set; }
     [Range(-90, 90)] public decimal Latitude { get; set; }

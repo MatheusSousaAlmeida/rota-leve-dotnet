@@ -46,6 +46,8 @@ namespace RotaLeve.Api.Infrastructure.Data.Migrations
                   ID_LOCALIDADE NUMBER(10) NOT NULL,
                   TIPO NUMBER(10) NOT NULL,
                   DESCRICAO VARCHAR2(600) NOT NULL,
+                  CHAVE_IDEMPOTENCIA VARCHAR2(64),
+                  HASH_REQUISICAO VARCHAR2(64),
                   LATITUDE NUMBER(10,7) NOT NULL,
                   LONGITUDE NUMBER(10,7) NOT NULL,
                   STATUS NUMBER(10) DEFAULT 1 NOT NULL,
@@ -55,6 +57,10 @@ namespace RotaLeve.Api.Infrastructure.Data.Migrations
                   CONSTRAINT FK_RELATO_USUARIO FOREIGN KEY (ID_USUARIO) REFERENCES USUARIO(ID_USUARIO),
                   CONSTRAINT FK_RELATO_LOCALIDADE FOREIGN KEY (ID_LOCALIDADE) REFERENCES LOCALIDADE(ID_LOCALIDADE)
                 )
+                """);
+
+            migrationBuilder.Sql("""
+                CREATE UNIQUE INDEX UX_RELATO_CHAVE_IDEMP ON RELATO (CHAVE_IDEMPOTENCIA)
                 """);
 
             migrationBuilder.Sql("""
