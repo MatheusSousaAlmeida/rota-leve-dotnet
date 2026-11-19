@@ -615,6 +615,10 @@ SELECT ID_RELATO, ID_LOCALIDADE, TIPO, DESCRICAO, STATUS FROM RELATO ORDER BY ID
 ```
 
 
+### Vídeo de demonstração
+
+▶️ https://www.youtube.com/watch?v=ulNcV7ejGsw
+
 ## 🤖 Declaração de uso de IA generativa
 
 | Ferramenta | Para quê |
