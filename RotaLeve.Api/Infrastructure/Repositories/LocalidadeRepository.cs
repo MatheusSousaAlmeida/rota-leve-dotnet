@@ -18,6 +18,15 @@ public class LocalidadeRepository(ApplicationContext db) : ILocalidadeRepository
 
         return localidadesAtivas.OrderBy(x => x.Nome).ToList();
     }
+    public async Task<(List<Localidade> Itens, int Total)> ListarPaginadoAsync(int pagina, int tamanhoPagina)
+    {
+        // Filtrar pelo NUMBER(1) fisico evita a conversao booleana do provider Oracle.
+        var consulta = db.Localidades.FromSqlRaw("SELECT * FROM LOCALIDADE WHERE ATIVO = 1").AsNoTracking();
+        var total = await consulta.CountAsync();
+        var itens = await consulta.OrderBy(x => x.Nome).ThenBy(x => x.IdLocalidade)
+            .Skip((pagina - 1) * tamanhoPagina).Take(tamanhoPagina).ToListAsync();
+        return (itens, total);
+    }
     public Task<Localidade?> ObterAsync(int id) => db.Localidades.FirstOrDefaultAsync(x => x.IdLocalidade == id);
     public async Task<Localidade> AdicionarAsync(Localidade entity) { db.Localidades.Add(entity); await db.SaveChangesAsync(); return entity; }
     public async Task<Localidade> AtualizarAsync(Localidade entity) { db.Localidades.Update(entity); await db.SaveChangesAsync(); return entity; }

@@ -21,10 +21,11 @@ public class RateLimitTests
     {
         // Arrange
         _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.CriarAsync(50, It.IsAny<RelatoRequestDto>()))
+        _factory.RelatoServiceMock.Setup(x => x.CriarAsync(50, It.IsAny<RelatoRequestDto>(), "limite-criacao"))
             .ReturnsAsync(OperationResult<RelatoResponseDto>.Success(CriarRelatoResponse(), 201));
         using var client = CriarClient(50);
         var request = CriarRelatoRequest();
+        client.DefaultRequestHeaders.Add("Idempotency-Key", "limite-criacao");
 
         // Act
         var respostas = new List<HttpResponseMessage>();

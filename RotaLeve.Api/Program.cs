@@ -42,7 +42,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 
-var secret = builder.Configuration["Secretkey"] ?? throw new InvalidOperationException("Secretkey não configurada.");
+var secret = builder.Configuration["Secretkey"];
+if (string.IsNullOrWhiteSpace(secret))
+{
+    throw new InvalidOperationException(
+        "Secretkey não configurada. Configure a chave JWT no appsettings.json ou na variável de ambiente Secretkey antes de iniciar a API.");
+}
 var key = JwtKeyHelper.Create(secret);
 builder.Services.AddAuthentication(options =>
 {
@@ -89,6 +94,10 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSwaggerGen(c =>
 {
     c.EnableAnnotations();
+    // Inclui comentarios XML dos DTOs, visiveis nos parametros do Swagger UI.
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, "RotaLeve.Api.xml");
+    if (File.Exists(xmlPath)) c.IncludeXmlComments(xmlPath);
+
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Rota Leve API",

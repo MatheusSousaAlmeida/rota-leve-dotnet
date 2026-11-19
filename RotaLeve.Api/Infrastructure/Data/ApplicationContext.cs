@@ -33,6 +33,9 @@ public class ApplicationContext(DbContextOptions<ApplicationContext> options) : 
         {
             e.Property(x => x.IdRelato).ValueGeneratedOnAdd();
             e.Property(x => x.Descricao).HasColumnType("VARCHAR2(600)");
+            e.Property(x => x.ChaveIdempotencia).HasColumnType("VARCHAR2(64)");
+            e.Property(x => x.HashRequisicao).HasColumnType("VARCHAR2(64)");
+            e.HasIndex(x => x.ChaveIdempotencia).IsUnique().HasDatabaseName("UX_RELATO_CHAVE_IDEMP");
             e.HasOne(x => x.Usuario).WithMany(x => x.Relatos).HasForeignKey(x => x.IdUsuario).OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_RELATO_USUARIO");
             e.HasOne(x => x.Localidade).WithMany(x => x.Relatos).HasForeignKey(x => x.IdLocalidade).OnDelete(DeleteBehavior.NoAction).HasConstraintName("FK_RELATO_LOCALIDADE");
         });

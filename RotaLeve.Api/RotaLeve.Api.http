@@ -46,3 +46,19 @@ Content-Type: application/json
 ###
 DELETE {{host}}/api/usuarios/1
 Authorization: Bearer {{token}}
+
+### Criar relato com idempotência (repita com a mesma chave para obter HTTP 200)
+POST {{host}}/api/relatos
+Authorization: Bearer {{token}}
+Idempotency-Key: exemplo-elevador-001
+Content-Type: application/json
+
+{"localidadeId":1,"tipo":1,"descricao":"Elevador principal indisponivel","latitude":-23.5505,"longitude":-46.6333}
+
+### Listagem paginada: pagina 2, 5 registros por pagina (requer JWT)
+GET {{host}}/api/localidades?pagina=2&tamanhoPagina=5
+Authorization: Bearer {{token}}
+
+### Parametros invalidos: retorna 400 Bad Request
+GET {{host}}/api/localidades?pagina=0&tamanhoPagina=101
+Authorization: Bearer {{token}}
