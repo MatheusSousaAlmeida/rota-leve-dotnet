@@ -56,6 +56,8 @@ stages:
         projects: '$(testProjects)'
         arguments: '-c $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
         publishTestResults: true          # aba "Tests" do run
+      env:
+        Secretkey: $(JWT_SECRET)
 
     - task: PublishCodeCoverageResults@2
       displayName: Publicar cobertura de codigo
@@ -64,14 +66,13 @@ stages:
         summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
 
     - task: DotNetCoreCLI@2
-      displayName: Testes unitarios e de integracao (xUnit)
+      displayName: Publish da API
       inputs:
-        command: test
-        projects: '$(testProjects)'
-        arguments: '-c $(buildConfiguration) --no-build --collect:"XPlat Code Coverage"'
-        publishTestResults: true
-      env:
-        Secretkey: $(JWT_SECRET)
+        command: publish
+        publishWebProjects: false
+        projects: '$(apiCsproj)'
+        arguments: '-c $(buildConfiguration) --no-build -o $(Build.ArtifactStagingDirectory)/app'
+        zipAfterPublish: true
 
     - task: PublishPipelineArtifact@1
       displayName: Publicar artefato (drop)
