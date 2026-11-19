@@ -3,6 +3,7 @@ using RotaLeve.Api.Domain.Models;
 namespace RotaLeve.Api.Application.Interfaces;
 public interface ILocalidadeService
 {
+    Task<PaginacaoResponseDto<LocalidadeResponseDto>> ListarPaginadoAsync(int pagina, int tamanhoPagina);
     Task<List<LocalidadeResponseDto>> ListarAsync();
     Task<OperationResult<LocalidadeResponseDto>> ObterAsync(int id);
     Task<OperationResult<LocalidadeResponseDto>> CriarAsync(LocalidadeRequestDto dto);

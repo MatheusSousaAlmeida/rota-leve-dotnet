@@ -20,7 +20,7 @@ public class RelatoServiceTests
         // Arrange
         _pontos.Setup(x => x.ObterAsync(99)).ReturnsAsync((Localidade?)null);
         // Act
-        var result = await CriarService().CriarAsync(1, DtoValido(99));
+        var result = await CriarService().CriarAsync(1, DtoValido(99), "unit-erro-localidade");
         // Assert
         Assert.False(result.IsSuccess);
         Assert.Equal(400, result.StatusCode);
@@ -34,20 +34,20 @@ public class RelatoServiceTests
     {
         // Arrange
         _pontos.Setup(x => x.ObterAsync(2)).ReturnsAsync(new Localidade { IdLocalidade = 2, Ativo = true });
-        _relatos.Setup(x => x.AdicionarAsync(It.IsAny<Relato>()))
-            .ReturnsAsync((Relato r) => { r.IdRelato = 15; return r; });
+        _relatos.Setup(x => x.AdicionarIdempotenteAsync(It.IsAny<Relato>()))
+            .ReturnsAsync((Relato r) => { r.IdRelato = 15; return (r, true); });
         var dto = DtoValido(2);
         dto.Descricao = "  Elevador principal indisponivel  ";
 
         // Act
-        var result = await CriarService().CriarAsync(8, dto);
+        var result = await CriarService().CriarAsync(8, dto, "unit-criacao");
 
         // Assert
         Assert.True(result.IsSuccess);
         Assert.Equal(201, result.StatusCode);
         Assert.Equal(StatusRelato.Novo, result.Value!.Status);
         Assert.Equal("Elevador principal indisponivel", result.Value.Descricao);
-        _relatos.Verify(x => x.AdicionarAsync(It.Is<Relato>(r => r.IdUsuario == 8 && r.Status == StatusRelato.Novo)), Times.Once);
+        _relatos.Verify(x => x.AdicionarIdempotenteAsync(It.Is<Relato>(r => r.IdUsuario == 8 && r.Status == StatusRelato.Novo && r.ChaveIdempotencia != null)), Times.Once);
     }
 
     [Fact]
@@ -185,6 +185,40 @@ public class RelatoServiceTests
         // Assert
         _relatos.Verify(x => x.ExpirarAntigosAsync(It.Is<DateTime>(d => d < DateTime.UtcNow.AddHours(-71))), Times.Once);
         _relatos.Verify(x => x.ListarAsync(), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Application", "Idempotencia")]
+    public async Task Criar_Repeticao_DeveReutilizarRelatoEOcorrendoMudancaRetornar409()
+    {
+        // Arrange
+        var request = DtoValido(2);
+        var chave = "solicitacao-123";
+        var hashChave = IdempotenciaRelato.GerarHashChave(8, chave);
+        var existente = new Relato
+        {
+            IdRelato = 37, IdUsuario = 8, IdLocalidade = 2,
+            Tipo = request.Tipo, Descricao = request.Descricao,
+            Latitude = request.Latitude, Longitude = request.Longitude,
+            ChaveIdempotencia = hashChave,
+            HashRequisicao = IdempotenciaRelato.GerarHashRequisicao(request)
+        };
+        _relatos.Setup(x => x.ObterPorChaveIdempotenciaAsync(hashChave))
+            .ReturnsAsync(existente);
+
+        // Act
+        var repetido = await CriarService().CriarAsync(8, request, chave);
+        var alterado = DtoValido(2);
+        alterado.Descricao = "Descricao diferente para mesma chave";
+        var conflito = await CriarService().CriarAsync(8, alterado, chave);
+
+        // Assert
+        Assert.True(repetido.IsSuccess);
+        Assert.Equal(200, repetido.StatusCode);
+        Assert.Equal(37, repetido.Value!.Id);
+        Assert.False(conflito.IsSuccess);
+        Assert.Equal(409, conflito.StatusCode);
+        _relatos.Verify(x => x.AdicionarIdempotenteAsync(It.IsAny<Relato>()), Times.Never);
     }
 
     private RelatoService CriarService() => new(_relatos.Object, _confirmacoes.Object, _pontos.Object);

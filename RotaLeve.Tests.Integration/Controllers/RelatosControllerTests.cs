@@ -23,8 +23,8 @@ public class RelatosControllerTests
     {
         // Arrange
         _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.ListarAsync())
-            .ReturnsAsync(new List<RelatoResponseDto>());
+        _factory.RelatoServiceMock.Setup(x => x.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(new PaginacaoResponseDto<RelatoResponseDto>(1, 10, 0, 0, new List<RelatoResponseDto>()));
         using var client = CriarClient("cidadao", 1);
 
         // Act
@@ -33,7 +33,7 @@ public class RelatosControllerTests
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Empty(await response.Content.ReadAsByteArrayAsync());
-        _factory.RelatoServiceMock.Verify(x => x.ListarAsync(), Times.Once);
+        _factory.RelatoServiceMock.Verify(x => x.ListarPaginadoAsync(1, 10), Times.Once);
     }
 
 
@@ -45,16 +45,17 @@ public class RelatosControllerTests
         // Arrange
         var request = CriarRequest();
         _factory.RelatoServiceMock.Reset();
-        _factory.RelatoServiceMock.Setup(x => x.CriarAsync(1, It.IsAny<RelatoRequestDto>()))
+        _factory.RelatoServiceMock.Setup(x => x.CriarAsync(1, It.IsAny<RelatoRequestDto>(), "integracao-relato"))
             .ReturnsAsync(OperationResult<RelatoResponseDto>.Success(CriarResponse(), 201));
         using var client = CriarClient("cidadao", 1);
 
         // Act
+        client.DefaultRequestHeaders.Add("Idempotency-Key", "integracao-relato");
         var response = await client.PostAsJsonAsync("/api/relatos", request);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        _factory.RelatoServiceMock.Verify(x => x.CriarAsync(1, It.IsAny<RelatoRequestDto>()), Times.Once);
+        _factory.RelatoServiceMock.Verify(x => x.CriarAsync(1, It.IsAny<RelatoRequestDto>(), "integracao-relato"), Times.Once);
     }
 
     [Fact]
@@ -117,6 +118,24 @@ public class RelatosControllerTests
     }
 
 
+
+    [Fact]
+    [Trait("Controller", "Idempotencia")]
+    public async Task Post_SemChaveIdempotencia_DeveRetornarBadRequest()
+    {
+        // Arrange
+        _factory.RelatoServiceMock.Reset();
+        using var client = CriarClient("cidadao", 1);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/relatos", CriarRequest());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        _factory.RelatoServiceMock.Verify(
+            x => x.CriarAsync(It.IsAny<int>(), It.IsAny<RelatoRequestDto>(), It.IsAny<string>()),
+            Times.Never);
+    }
 
     private HttpClient CriarClient(string role, int userId)
     {

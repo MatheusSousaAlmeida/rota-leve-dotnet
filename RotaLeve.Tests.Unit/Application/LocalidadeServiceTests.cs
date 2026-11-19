@@ -44,7 +44,7 @@ public class LocalidadeServiceTests
 
     [Fact]
     [Trait("Application", "Localidades")]
-    public async Task Excluir_Existente_DeveRetornar204()
+    public async Task Excluir_Existente_DeveRetornar200()
     {
         // Arrange
         _repository.Setup(x => x.ExcluirAsync(7)).ReturnsAsync(true);
@@ -52,7 +52,7 @@ public class LocalidadeServiceTests
         var result = await new LocalidadeService(_repository.Object).ExcluirAsync(7);
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.Equal(204, result.StatusCode);
+        Assert.Equal(200, result.StatusCode);
     }
 
 

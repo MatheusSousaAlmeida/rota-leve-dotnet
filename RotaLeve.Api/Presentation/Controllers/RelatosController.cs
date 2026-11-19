@@ -20,16 +20,17 @@ public class RelatosController(IRelatoService service) : ControllerBase
     [EnableRateLimiting("listagens")]
     [SwaggerOperation(
         Summary = "Listar relatos colaborativos",
-        Description = "Retorna os relatos de acessibilidade cadastrados na plataforma, incluindo status e quantidade de confirmações.")]
-    [SwaggerResponse(StatusCodes.Status200OK, "Relatos retornados com sucesso", typeof(IEnumerable<RelatoResponseDto>))]
+        Description = "Retorna relatos em páginas, do mais recente para o mais antigo, com status e confirmações. Parâmetros: pagina (padrão 1, máximo 1000000) e tamanhoPagina (padrão 10, máximo 100).")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Relatos retornados com sucesso", typeof(PaginacaoResponseDto<RelatoResponseDto>))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Parâmetros de paginação inválidos")]
     [SwaggerResponse(StatusCodes.Status204NoContent, "Nenhum relato cadastrado")]
     [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de consultas da listagem excedido")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para acessar o recurso")]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] PaginacaoRequestDto paginacao)
     {
-        var relatos = await service.ListarAsync();
-        return relatos.Count == 0 ? NoContent() : Ok(relatos);
+        var resultado = await service.ListarPaginadoAsync(paginacao.Pagina, paginacao.TamanhoPagina);
+        return resultado.Dados.Count == 0 ? NoContent() : Ok(resultado);
     }
 
     [HttpGet("{id:int}")]
@@ -52,15 +53,19 @@ public class RelatosController(IRelatoService service) : ControllerBase
     [EnableRateLimiting("relatos")]
     [SwaggerOperation(
         Summary = "Criar relato",
-        Description = "Cria um novo relato de acessibilidade associado ao usuário autenticado. A operação possui política de Rate Limiting para reduzir spam.")]
+        Description = "Cria um relato com Idempotency-Key obrigatório. Primeira execução: 201. Mesma chave e conteúdo: 200 e relato existente. Mesma chave e dados diferentes: 409. Rate Limiting protege contra spam.")]
     [SwaggerResponse(StatusCodes.Status201Created, "Relato criado com sucesso", typeof(RelatoResponseDto))]
+    [SwaggerResponse(StatusCodes.Status200OK, "Requisição repetida: relato existente", typeof(RelatoResponseDto))]
+    [SwaggerResponse(StatusCodes.Status409Conflict, "Chave reutilizada com conteúdo diferente")]
     [SwaggerResponse(StatusCodes.Status400BadRequest, "Dados inválidos ou localidade inexistente/inativo")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para criar relatos")]
     [SwaggerResponse(StatusCodes.Status429TooManyRequests, "Limite de criação de relatos excedido")]
-    public async Task<IActionResult> Post(RelatoRequestDto dto)
+    public async Task<IActionResult> Post(RelatoRequestDto dto, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey)
     {
-        var r = await service.CriarAsync(UsuarioId, dto);
+        if (!RotaLeve.Api.Application.Services.IdempotenciaRelato.ChaveValida(idempotencyKey))
+            return BadRequest(new { erro = "Header Idempotency-Key obrigatório (1 a 200 caracteres ASCII visíveis)." });
+        var r = await service.CriarAsync(UsuarioId, dto, idempotencyKey!);
         return r.IsSuccess
             ? StatusCode(r.StatusCode, r.Value)
             : StatusCode(r.StatusCode, new { erro = r.Error });
@@ -88,7 +93,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
     [SwaggerOperation(
         Summary = "Excluir relato",
         Description = "Permite ao cidadão excluir apenas um relato próprio ainda em status Novo. O admin pode excluir qualquer relato.")]
-    [SwaggerResponse(StatusCodes.Status204NoContent, "Relato excluído com sucesso")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Relato excluído com sucesso")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Cidadão tentando excluir relato de outro usuário")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Relato não encontrado")]
@@ -97,7 +102,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
     {
         var r = await service.ExcluirAsync(id, UsuarioId, Admin);
         return r.IsSuccess
-            ? NoContent()
+            ? Ok(new { mensagem = "Relato excluído com sucesso.", relatoId = id })
             : StatusCode(r.StatusCode, new { erro = r.Error });
     }
 
@@ -124,7 +129,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
     [SwaggerOperation(
         Summary = "Remover minha confirmação",
         Description = "Remove a confirmação do usuário autenticado para o relato informado. Caso não existam mais confirmações, o relato retorna para o status Novo, conforme a regra de negócio.")]
-    [SwaggerResponse(StatusCodes.Status204NoContent, "Confirmação removida com sucesso")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Confirmação removida com sucesso")]
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Token JWT ausente ou inválido")]
     [SwaggerResponse(StatusCodes.Status403Forbidden, "Usuário sem permissão para acessar o recurso")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Relato ou confirmação não encontrados")]
@@ -132,7 +137,7 @@ public class RelatosController(IRelatoService service) : ControllerBase
     {
         var r = await service.RemoverConfirmacaoAsync(id, UsuarioId);
         return r.IsSuccess
-            ? NoContent()
+            ? Ok(new { mensagem = "Confirmação removida com sucesso.", relatoId = id })
             : StatusCode(r.StatusCode, new { erro = r.Error });
     }
 

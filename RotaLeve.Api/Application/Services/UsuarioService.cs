@@ -10,6 +10,14 @@ namespace RotaLeve.Api.Application.Services;
 
 public class UsuarioService(IUsuarioRepository usuarios, IPasswordHasher hasher) : IUsuarioService
 {
+    public async Task<PaginacaoResponseDto<UsuarioDetalheResponseDto>> ListarPaginadoAsync(int pagina, int tamanhoPagina)
+    {
+        var (itens, total) = await usuarios.ListarPaginadoAsync(pagina, tamanhoPagina);
+        return new PaginacaoResponseDto<UsuarioDetalheResponseDto>(
+            pagina, tamanhoPagina, total, (int)Math.Ceiling(total / (double)tamanhoPagina),
+            itens.Select(ToDto).ToList());
+    }
+
     public async Task<IEnumerable<UsuarioDetalheResponseDto>> ListarAsync()
         => (await usuarios.ListarAsync()).Select(ToDto);
 
@@ -69,9 +77,8 @@ public class UsuarioService(IUsuarioRepository usuarios, IPasswordHasher hasher)
         if (usuario is null)
             return OperationResult<bool>.Failure("Usuário não encontrado.", 404);
 
-        usuario.Ativo = false;
-        await usuarios.AtualizarAsync(usuario);
-        return OperationResult<bool>.Success(true, 204);
+        await usuarios.ExcluirDefinitivamenteAsync(usuario);
+        return OperationResult<bool>.Success(true, 200);
     }
 
     private static TipoUsuario ParsePerfil(string perfil)

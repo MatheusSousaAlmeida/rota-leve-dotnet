@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using RotaLeve.Api.Domain.Entities;
 using RotaLeve.Api.Domain.Enums;
 using RotaLeve.Api.Infrastructure.Security;
+using RotaLeve.Tests.Unit.Configuration;
 
 namespace RotaLeve.Tests.Unit.Security;
 
@@ -34,7 +35,7 @@ public class JwtTokenServiceTests
 
     [Fact]
     [Trait("Security", "JWT")]
-    public void GerarToken_SecretkeyDe30Caracteres_DeveGerarTokenComSucesso()
+    public void GerarToken_SecretkeyConfigurada_DeveGerarTokenComSucesso()
     {
         // Arrange
         var service = CriarService();
@@ -60,7 +61,7 @@ public class JwtTokenServiceTests
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Secretkey"] = "t7w0soRP8sIIHWl2P0rbZoZEX7f2rm"
+                ["Secretkey"] = JwtTestConfiguration.GetSecretKey()
             })
             .Build();
 

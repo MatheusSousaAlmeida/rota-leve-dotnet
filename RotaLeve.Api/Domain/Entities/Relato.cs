@@ -11,6 +11,12 @@ public class Relato
     [Key, Column("ID_RELATO"), DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int IdRelato { get; set; }
 
+    [StringLength(64), Column("CHAVE_IDEMPOTENCIA", TypeName = "VARCHAR2(64)")]
+    public string? ChaveIdempotencia { get; set; }
+
+    [StringLength(64), Column("HASH_REQUISICAO", TypeName = "VARCHAR2(64)")]
+    public string? HashRequisicao { get; set; }
+
     [Column("ID_USUARIO")]
     public int IdUsuario { get; set; }
 

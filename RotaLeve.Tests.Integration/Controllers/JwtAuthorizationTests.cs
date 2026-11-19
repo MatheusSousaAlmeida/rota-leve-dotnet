@@ -16,12 +16,13 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using RotaLeve.Api.Infrastructure.Security;
+using RotaLeve.Tests.Integration.Configuration;
 
 namespace RotaLeve.Tests.Integration.Controllers;
 
 public class JwtAuthorizationTests
 {
-    private const string Secret = "t7w0soRP8sIIHWl2P0rbZoZEX7f2rm";
+    private static string Secret => JwtTestConfiguration.GetSecretKey();
 
     [Fact]
     [Trait("Security", "JWT")]
@@ -89,7 +90,7 @@ public class JwtAuthorizationTests
                 new AuthResponseDto(jwt.Token, jwt.ExpiresAtUtc,
                     new UsuarioResponseDto(usuario.IdUsuario, usuario.Nome, usuario.Email, "admin"))));
         var relatos = new Mock<IRelatoService>();
-        relatos.Setup(s => s.ListarAsync()).ReturnsAsync(new List<RelatoResponseDto>());
+        relatos.Setup(s => s.ListarPaginadoAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(new PaginacaoResponseDto<RelatoResponseDto>(1, 10, 0, 0, new List<RelatoResponseDto>()));
         await using var factory = CriarFactoryComServicos(auth.Object, relatos.Object);
         using var client = factory.CreateClient();
 

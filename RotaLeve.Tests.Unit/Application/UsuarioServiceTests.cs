@@ -140,7 +140,7 @@ public class UsuarioServiceTests
 
     [Fact]
     [Trait("Service", "Usuario")]
-    public async Task Excluir_UsuarioExistente_DeveRealizarExclusaoLogica()
+    public async Task Excluir_UsuarioExistente_DeveRemoverDefinitivamente()
     {
         // Arrange
         var usuario = CriarUsuario(1, "Maria", "maria@exemplo.com", TipoUsuario.Cidadao);
@@ -152,9 +152,10 @@ public class UsuarioServiceTests
 
         // Assert
         Assert.True(resultado.IsSuccess);
-        Assert.Equal(204, resultado.StatusCode);
-        Assert.False(usuario.Ativo);
-        _repository.Verify(x => x.AtualizarAsync(usuario), Times.Once);
+        Assert.Equal(200, resultado.StatusCode);
+        Assert.True(usuario.Ativo); // Nao e mais uma desativacao logica.
+        _repository.Verify(x => x.ExcluirDefinitivamenteAsync(usuario), Times.Once);
+        _repository.Verify(x => x.AtualizarAsync(It.IsAny<Usuario>()), Times.Never);
     }
 
     private UsuarioService CriarService() => new(_repository.Object, _hasher.Object);
